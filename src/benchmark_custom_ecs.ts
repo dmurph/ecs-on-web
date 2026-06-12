@@ -1,0 +1,351 @@
+import { ENTITY_COLORS, ENTITY_MAX_SPEED } from './config';
+import { SeededPRNG } from './prng';
+import type { Simulator, EntityState } from './simulator';
+import { renderCanvas } from './renderer';
+
+export interface ECSData {
+  posX: Float64Array;
+  posYwh: Float64Array; // Packed [posY, w, h] for each entity
+  colorId: Uint8Array; // Component to store color indexes (contiguously)
+  angle: Float64Array;
+  vx: Float64Array;
+  vy: Float64Array;
+  indices: Int32Array;
+  id: Int32Array; // Original entity ID mapped to each index
+}
+
+export function createECSData(numEntities: number, canvasWidth: number, canvasHeight: number): ECSData {
+  // posX is isolated to optimize cache line utilization during Sweep-and-Prune sorting
+  const posX = new Float64Array(numEntities);
+  // posYwh is packed [y, w, h] to load components together during Y-overlap checks
+  const posYwh = new Float64Array(numEntities * 3);
+  const colorId = new Uint8Array(numEntities);
+  const angle = new Float64Array(numEntities);
+  const vx = new Float64Array(numEntities);
+  const vy = new Float64Array(numEntities);
+  const indices = new Int32Array(numEntities);
+  const id = new Int32Array(numEntities);
+
+  for (let i = 0; i < numEntities; i++) {
+    const size = 2 + Math.random() * 3; // Default fallback size randomization
+    posX[i] = Math.random() * (canvasWidth - size);
+    posYwh[i * 3 + 0] = Math.random() * (canvasHeight - size); // posY
+    posYwh[i * 3 + 1] = size; // w
+    posYwh[i * 3 + 2] = size; // h
+    colorId[i] = Math.floor(Math.random() * ENTITY_COLORS.length);
+    angle[i] = Math.random() * Math.PI * 2;
+    vx[i] = Math.cos(angle[i]) * 1.0;
+    vy[i] = Math.sin(angle[i]) * 1.0;
+    indices[i] = i;
+    id[i] = i;
+  }
+
+  return { posX, posYwh, colorId, angle, vx, vy, indices, id };
+}
+
+export function runBroadphase(
+  indices: Int32Array,
+  posX: Float64Array,
+  posYwh: Float64Array,
+  outPairs: Int32Array,
+  ids: Int32Array
+): number {
+  let pairCount = 0;
+  const len = indices.length;
+  const maxPairs = outPairs.length / 2;
+
+  // 1. Insertion Sort: runs in near-linear O(n) time when data exhibits high spatial coherence
+  for (let i = 1; i < len; i++) {
+    const currIdx = indices[i];
+    const currX = posX[currIdx]; 
+    let j = i - 1;
+    while (j >= 0 && posX[indices[j]] > currX) {
+      indices[j + 1] = indices[j];
+      j--;
+    }
+    indices[j + 1] = currIdx;
+  }
+
+  // 2. Sweep: Read X coordinates and Y overlap
+  for (let i = 0; i < len; i++) {
+    const aIdx = indices[i];
+    const ax = posX[aIdx];
+    const aRight = ax + posYwh[aIdx * 3 + 1]; // posYwh[aIdx * 3 + 1] is width (w)
+    for (let j = i + 1; j < len; j++) {
+      const bIdx = indices[j];
+      const bx = posX[bIdx]; 
+      if (bx > aRight) break; // Prune: subsequent X coordinates cannot overlap
+
+      // Y-axis overlap check (AABB overlap) - reads packed posY, h
+      const ay = posYwh[aIdx * 3 + 0];
+      const ah = posYwh[aIdx * 3 + 2];
+      const by = posYwh[bIdx * 3 + 0];
+      const bh = posYwh[bIdx * 3 + 2];
+      if (ay < by + bh && ay + ah > by) {
+        if (pairCount < maxPairs) {
+          outPairs[pairCount * 2] = ids[aIdx];
+          outPairs[pairCount * 2 + 1] = ids[bIdx];
+          pairCount++;
+        }
+      }
+    }
+  }
+  return pairCount;
+}
+
+export function resolveCollisions(
+  ecs: ECSData,
+  pairs: Int32Array,
+  pairCount: number,
+  isColliding: Uint8Array
+): number {
+  let collisionCount = 0;
+  const { posX, posYwh, vx, vy, angle } = ecs;
+
+  for (let i = 0; i < pairCount; i++) {
+    const idA = pairs[i * 2];
+    const idB = pairs[i * 2 + 1];
+
+    const dx = posX[idB] - posX[idA];
+    const dy = posYwh[idB * 3 + 0] - posYwh[idA * 3 + 0];
+    const distSq = dx * dx + dy * dy;
+    const minDist = (posYwh[idA * 3 + 1] + posYwh[idB * 3 + 1]) / 2; // Radius sum
+
+    if (distSq < minDist * minDist && distSq > 0.001) {
+      isColliding[idA] = 1;
+      isColliding[idB] = 1;
+
+      pairs[collisionCount * 2] = idA;
+      pairs[collisionCount * 2 + 1] = idB;
+      collisionCount++;
+
+      const dist = Math.sqrt(distSq);
+      const overlap = minDist - dist;
+      const nx = dx / dist;
+      const ny = dy / dist;
+
+      posX[idA] -= nx * overlap * 0.5;
+      posYwh[idA * 3 + 0] -= ny * overlap * 0.5;
+      posX[idB] += nx * overlap * 0.5;
+      posYwh[idB * 3 + 0] += ny * overlap * 0.5;
+
+      const massA = posYwh[idA * 3 + 1] * posYwh[idA * 3 + 1];
+      const massB = posYwh[idB * 3 + 1] * posYwh[idB * 3 + 1];
+      const rvx = vx[idB] - vx[idA];
+      const rvy = vy[idB] - vy[idA];
+      const velAlongNormal = rvx * nx + rvy * ny;
+ 
+      if (velAlongNormal < 0) {
+        const impulse = -(2 * velAlongNormal) / (1 / massA + 1 / massB);
+        vx[idA] -= (impulse / massA) * nx;
+        vy[idA] -= (impulse / massA) * ny;
+        vx[idB] += (impulse / massB) * nx;
+        vy[idB] += (impulse / massB) * ny;
+
+        const speedA = Math.sqrt(vx[idA] * vx[idA] + vy[idA] * vy[idA]);
+        if (speedA > ENTITY_MAX_SPEED) {
+          vx[idA] = (vx[idA] / speedA) * ENTITY_MAX_SPEED;
+          vy[idA] = (vy[idA] / speedA) * ENTITY_MAX_SPEED;
+        }
+        const speedB = Math.sqrt(vx[idB] * vx[idB] + vy[idB] * vy[idB]);
+        if (speedB > ENTITY_MAX_SPEED) {
+          vx[idB] = (vx[idB] / speedB) * ENTITY_MAX_SPEED;
+          vy[idB] = (vy[idB] / speedB) * ENTITY_MAX_SPEED;
+        }
+
+        angle[idA] = Math.atan2(vy[idA], vx[idA]);
+        angle[idB] = Math.atan2(vy[idB], vx[idB]);
+      }
+    }
+  }
+  return collisionCount;
+}
+
+export function updateMovement(
+  ecsData: ECSData,
+  canvasWidth: number,
+  canvasHeight: number,
+  speedMultiplier: number,
+  behavior: string,
+  prng: SeededPRNG
+) {
+  const { posX, posYwh, vx, vy, angle } = ecsData;
+  const len = posX.length;
+
+  if (behavior === 'wander') {
+    for (let i = 0; i < len; i++) {
+      angle[i] += (prng.next() - 0.5) * 0.4;
+      vx[i] = Math.cos(angle[i]) * 1.2 * speedMultiplier;
+      vy[i] = Math.sin(angle[i]) * 1.2 * speedMultiplier;
+
+      posX[i] += vx[i];
+      posYwh[i * 3 + 0] += vy[i]; // posY
+
+      let bounced = false;
+      const w = posYwh[i * 3 + 1];
+      const h = posYwh[i * 3 + 2];
+
+      if (posX[i] < 0) {
+        posX[i] = 0;
+        angle[i] = Math.PI - angle[i];
+        bounced = true;
+      } else if (posX[i] + w > canvasWidth) {
+        posX[i] = canvasWidth - w;
+        angle[i] = Math.PI - angle[i];
+        bounced = true;
+      }
+
+      if (posYwh[i * 3 + 0] < 0) {
+        posYwh[i * 3 + 0] = 0;
+        angle[i] = -angle[i];
+        bounced = true;
+      } else if (posYwh[i * 3 + 0] + h > canvasHeight) {
+        posYwh[i * 3 + 0] = canvasHeight - h;
+        angle[i] = -angle[i];
+        bounced = true;
+      }
+
+      if (bounced) {
+        vx[i] = Math.cos(angle[i]) * 1.2 * speedMultiplier;
+        vy[i] = Math.sin(angle[i]) * 1.2 * speedMultiplier;
+      }
+    }
+  } else if (behavior === 'erratic') {
+    for (let i = 0; i < len; i++) {
+      const w = posYwh[i * 3 + 1];
+      const h = posYwh[i * 3 + 2];
+      posX[i] = prng.next() * (canvasWidth - w);
+      posYwh[i * 3 + 0] = prng.next() * (canvasHeight - h);
+    }
+  }
+}
+
+/**
+ * Simulator representing a custom lightweight Entity Component System (ECS).
+ * 
+ * Data Layout: Struct of Arrays (SoA).
+ * Component data is stored in flat TypedArrays (`posX`, `posYwh`, `vx`, `vy`, `angle`, `colorId`).
+ * Accessing components is done by index (entity ID), ensuring contiguous memory
+ * reads during systems execution, maximizing CPU cache line usage (L1/L2 hits).
+ * 
+ * Algorithm: Sweep-and-Prune (S&P) using 1D Insertion Sort of entity index array,
+ * checking bounds by indexing directly into component arrays.
+ */
+export class CustomECSSimulator implements Simulator {
+  id = 'ecs';
+  name = 'ECS Custom S&P';
+  color = '#0d9488';
+
+  private ecsData: ECSData | null = null;
+  private times: number[] = [];
+  private colliding = new Uint8Array(0);
+  private pairsBuffer = new Int32Array(0);
+  private maxCollisions = 200000;
+  private lastCollisionCount = 0;
+  private pairsCount = 0;
+
+  /**
+   * Allocates flat component typed arrays inside ECSData.
+   */
+  init(numEntities: number, width: number, height: number, _prng: SeededPRNG) {
+    this.ecsData = createECSData(numEntities, width, height);
+    this.colliding = new Uint8Array(numEntities);
+    this.pairsBuffer = new Int32Array(this.maxCollisions * 2);
+    this.lastCollisionCount = 0;
+    this.pairsCount = 0;
+  }
+
+  /**
+   * Executes a full simulation step, timing all operations:
+   * 1. Movement updates (updatingposX, posYwh TypedArrays sequentially).
+   * 2. Sweep-and-Prune broadphase (sorting indices array using posX elements, and sweeping bounds).
+   * 3. Narrowphase resolution (indexing components using colliding pairs to calculate bounces).
+   * 
+   * This measures the benefits of SoA cache alignment: sequential reads/writes are L1 cache friendly,
+   * even though indices mapping causes slight indirection during the sweep.
+   */
+  update(width: number, height: number, speedMultiplier: number, behavior: string, prng: SeededPRNG): { time: number, collisionCount: number } {
+    const start = performance.now();
+    this.pairsCount = 0;
+    if (this.ecsData) {
+      updateMovement(this.ecsData, width, height, speedMultiplier, behavior, prng);
+      this.pairsCount = runBroadphase(
+        this.ecsData.indices,
+        this.ecsData.posX,
+        this.ecsData.posYwh,
+        this.pairsBuffer,
+        this.ecsData.id
+      );
+      
+      this.colliding.fill(0);
+      this.lastCollisionCount = resolveCollisions(this.ecsData, this.pairsBuffer, this.pairsCount, this.colliding);
+    }
+    const end = performance.now();
+    const time = end - start;
+    this.times.push(time);
+    return { time, collisionCount: this.lastCollisionCount };
+  }
+
+  /**
+   * Renders the custom ECS simulation.
+   */
+  render(ctx: CanvasRenderingContext2D) {
+    if (this.ecsData) {
+      renderCanvas(ctx.canvas, ctx, this.ecsData, this.colliding, 'ecs', this.pairsBuffer, this.lastCollisionCount, this.ecsData.posX.length);
+    }
+  }
+
+  getTimes() { return this.times; }
+  clearTimes() { this.times = []; }
+
+  /**
+   * Translates flat TypedArray component buffers into structured EntityState array
+   * for baseline position sync.
+   */
+  getPositions(): EntityState[] {
+    if (!this.ecsData) return [];
+    const { posX, posYwh, vx, vy, angle, colorId } = this.ecsData;
+    const len = posX.length;
+    const result = new Array<EntityState>(len);
+    for (let i = 0; i < len; i++) {
+      result[i] = {
+        x: posX[i],
+        y: posYwh[i * 3 + 0],
+        w: posYwh[i * 3 + 1],
+        h: posYwh[i * 3 + 2],
+        vx: vx[i],
+        vy: vy[i],
+        angle: angle[i],
+        color: ENTITY_COLORS[colorId[i]]
+      };
+    }
+    return result;
+  }
+
+  /**
+   * Overwrites flat component buffers using structured baseline state.
+   */
+  setPositions(positions: EntityState[]) {
+    if (!this.ecsData) return;
+    const { posX, posYwh, vx, vy, angle, colorId } = this.ecsData;
+    for (let i = 0; i < positions.length; i++) {
+      const p = positions[i];
+      posX[i] = p.x;
+      posYwh[i * 3 + 0] = p.y;
+      posYwh[i * 3 + 1] = p.w;
+      posYwh[i * 3 + 2] = p.h;
+      vx[i] = p.vx;
+      vy[i] = p.vy;
+      angle[i] = p.angle;
+      colorId[i] = ENTITY_COLORS.indexOf(p.color);
+    }
+  }
+}
+
+// Aliases for compatibility
+export {
+  updateMovement as updateECSMovement,
+  runBroadphase as runECSBroadphase,
+  resolveCollisions as resolveECSPhysics
+};
+

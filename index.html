@@ -1,0 +1,904 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="An interactive real-time performance benchmark comparing Object-Oriented Programming (OOP) to Data-Oriented Entity Component System (ECS) using a Sweep-and-Prune collision detection algorithm."
+    />
+    <title>ECS vs. OOP Spatial Benchmark</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+
+  <body>
+    <div class="app-container">
+      <header class="main-header">
+        <div class="header-title">
+          <div class="pulse-indicator" id="status-pulse"></div>
+          <h1>ECS vs OOP Spatial Benchmark</h1>
+        </div>
+        <div class="status-badge-container">
+          Status: <span id="status-text">Ready</span>
+        </div>
+      </header>
+
+      <section class="section-intro">
+        <p>
+          Can javascript actually take advantage of a high performance ECS
+          system? Where memory locality is optimized for quick loops? Or are the
+          inherit limitations of the v8 engine and javascript make this
+          impossible? And is WASM required for this optimization?
+        </p>
+        <br />
+        <p>
+          This benchmark attempts to discover if doing this architectures is
+          possible, and if so, if it is actually faster.
+        </p>
+      </section>
+
+      <section class="section-simulators-toggle">
+        <span class="toggle-title">Active Simulators:</span>
+        <div class="toggle-group">
+          <label class="toggle-label"
+            ><input type="checkbox" id="toggle-oop" checked /> OOP S&P</label
+          >
+          <label class="toggle-label"
+            ><input type="checkbox" id="toggle-oop-tree" checked /> OOP
+            Tree</label
+          >
+          <label class="toggle-label"
+            ><input type="checkbox" id="toggle-ecs" checked /> ECS Custom
+            S&P</label
+          >
+          <label class="toggle-label"
+            ><input type="checkbox" id="toggle-ecs-tree" checked /> ECS Custom
+            Tree</label
+          >
+          <label class="toggle-label"
+            ><input type="checkbox" id="toggle-bitecs" checked /> bitECS
+            S&P</label
+          >
+          <label class="toggle-label"
+            ><input type="checkbox" id="toggle-wasm" checked /> WASM ECS
+            S&P</label
+          >
+        </div>
+      </section>
+
+      <!-- 1. Controls Section -->
+      <section class="section-controls">
+        <h2>Simulation Settings</h2>
+        <div class="controls-grid">
+          <div class="control-group">
+            <label for="movement-behavior-select">Spatial Coherence</label>
+            <select id="movement-behavior-select">
+              <option value="wander">Wandering (High Coherence)</option>
+              <option value="erratic">Erratic (Low Coherence)</option>
+              <option value="static">Static (Absolute Coherence)</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="entity-count-slider"
+              >Entity Count: <span id="entity-count-val">5000</span></label
+            >
+            <input
+              type="range"
+              id="entity-count-slider"
+              min="100"
+              max="15000"
+              step="100"
+              value="5000"
+            />
+          </div>
+
+          <div class="control-group">
+            <label for="speed-slider"
+              >Entity Speed: <span id="speed-val">1.0x</span></label
+            >
+            <input
+              type="range"
+              id="speed-slider"
+              min="0.1"
+              max="5.0"
+              step="0.1"
+              value="1.0"
+            />
+          </div>
+
+          <div class="control-group">
+            <label for="benchmark-frames-slider"
+              >Benchmark Length:
+              <span id="benchmark-frames-val">1000 frames</span></label
+            >
+            <input
+              type="range"
+              id="benchmark-frames-slider"
+              min="100"
+              max="3000"
+              step="100"
+              value="1000"
+            />
+          </div>
+        </div>
+
+        <div class="action-buttons-container">
+          <div class="action-buttons">
+            <button id="btn-run-benchmark" class="btn btn-primary">
+              Start Benchmark
+            </button>
+            <button id="btn-toggle-pause" class="btn btn-secondary" disabled>
+              Pause
+            </button>
+            <button id="btn-reset" class="btn btn-tertiary">Reset</button>
+          </div>
+          <p class="control-desc" id="coherence-desc">
+            <strong>Wandering</strong> keeps particles moving smoothly.
+            Frame-to-frame positions are almost identical, enabling optimal
+            linear-time sorting.
+          </p>
+        </div>
+      </section>
+
+      <!-- 2. Displays (Metrics) Section -->
+      <section class="section-displays">
+        <h2>Performance Displays</h2>
+        <div class="metrics-grid">
+          <!-- 1. OOP S&P -->
+          <div class="metric-card oop-card" id="card-metric-oop">
+            <div class="card-header-simple">
+              <h3>OOP S&P</h3>
+              <span class="legend-dot legend-oop"></span>
+            </div>
+            <div class="metric-values">
+              <div class="metric-item">
+                <span class="metric-label">Current</span>
+                <span class="metric-value font-mono" id="oop-current-time"
+                  >0.00 ms</span
+                >
+              </div>
+              <div class="metric-item">
+                <span class="metric-label">Average</span>
+                <span class="metric-value font-mono" id="oop-avg-time"
+                  >0.00 ms</span
+                >
+              </div>
+              <div class="metric-item">
+                <span class="metric-label">99th %</span>
+                <span class="metric-value font-mono" id="oop-p99-time"
+                  >0.00 ms</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. OOP Tree -->
+          <div class="metric-card oop-tree-card" id="card-metric-oop-tree">
+            <div class="card-header-simple">
+              <h3>OOP Tree</h3>
+              <span class="legend-dot legend-oop-tree"></span>
+            </div>
+            <div class="metric-values">
+              <div class="metric-item">
+                <span class="metric-label">Current</span>
+                <span class="metric-value font-mono" id="oop-tree-current-time"
+                  >0.00 ms</span
+                >
+              </div>
+              <div class="metric-item">
+                <span class="metric-label">Average</span>
+                <span class="metric-value font-mono" id="oop-tree-avg-time"
+                  >0.00 ms</span
+                >
+              </div>
+              <div class="metric-item">
+                <span class="metric-label">99th %</span>
+                <span class="metric-value font-mono" id="oop-tree-p99-time"
+                  >0.00 ms</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Custom ECS -->
+          <div class="metric-card ecs-card" id="card-metric-ecs">
+            <div class="card-header-simple">
+              <h3>ECS Custom S&P</h3>
+              <span class="legend-dot legend-ecs"></span>
+            </div>
+            <div class="metric-values">
+              <div class="metric-item">
+                <span class="metric-label">Current</span>
+                <span class="metric-value font-mono" id="ecs-current-time"
+                  >0.00 ms</span
+                >
+              </div>
+              <div class="metric-item">
+                <span class="metric-label">Average</span>
+                <span class="metric-value font-mono" id="ecs-avg-time"
+                  >0.00 ms</span
+                >
+              </div>
+              <div class="metric-item">
+                <span class="metric-label">99th %</span>
+                <span class="metric-value font-mono" id="ecs-p99-time"
+                  >0.00 ms</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. ECS Tree -->
+          <div class="metric-card ecs-tree-card" id="card-metric-ecs-tree">
+            <div class="card-header-simple">
+              <h3>ECS Tree</h3>
+              <span class="legend-dot legend-ecs-tree"></span>
+            </div>
+            <div class="metric-values">
+              <div class="metric-item">
+                <span class="metric-label">Current</span>
+                <span class="metric-value font-mono" id="ecs-tree-current-time"
+                  >0.00 ms</span
+                >
+              </div>
+              <div class="metric-item">
+                <span class="metric-label">Average</span>
+                <span class="metric-value font-mono" id="ecs-tree-avg-time"
+                  >0.00 ms</span
+                >
+              </div>
+              <div class="metric-item">
+                <span class="metric-label">99th %</span>
+                <span class="metric-value font-mono" id="ecs-tree-p99-time"
+                  >0.00 ms</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- 5. bitECS -->
+          <div class="metric-card bitecs-card" id="card-metric-bitecs">
+            <div class="card-header-simple">
+              <h3>bitECS S&P</h3>
+              <span class="legend-dot legend-bitecs"></span>
+            </div>
+            <div class="metric-values">
+              <div class="metric-item">
+                <span class="metric-label">Current</span>
+                <span class="metric-value font-mono" id="bitecs-current-time"
+                  >0.00 ms</span
+                >
+              </div>
+              <div class="metric-item">
+                <span class="metric-label">Average</span>
+                <span class="metric-value font-mono" id="bitecs-avg-time"
+                  >0.00 ms</span
+                >
+              </div>
+              <div class="metric-item">
+                <span class="metric-label">99th %</span>
+                <span class="metric-value font-mono" id="bitecs-p99-time"
+                  >0.00 ms</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- 6. WASM ECS S&P -->
+          <div class="metric-card wasm-card" id="card-metric-wasm">
+            <div class="card-header-simple">
+              <h3>WASM ECS S&P</h3>
+              <span class="legend-dot legend-wasm"></span>
+            </div>
+            <div class="metric-values">
+              <div class="metric-item">
+                <span class="metric-label">Current</span>
+                <span class="metric-value font-mono" id="wasm-current-time"
+                  >0.00 ms</span
+                >
+              </div>
+              <div class="metric-item">
+                <span class="metric-label">Average</span>
+                <span class="metric-value font-mono" id="wasm-avg-time"
+                  >0.00 ms</span
+                >
+              </div>
+              <div class="metric-item">
+                <span class="metric-label">99th %</span>
+                <span class="metric-value font-mono" id="wasm-p99-time"
+                  >0.00 ms</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Speedup Comparison Card -->
+          <div class="metric-card speedup-card">
+            <div class="speedup-header">
+              <div class="comparison-select-container">
+                <h3>Speedup vs</h3>
+                <select id="compare-baseline-select" class="compare-select">
+                  <option value="oop">OOP S&P</option>
+                  <option value="oop-tree">OOP Tree</option>
+                  <option value="ecs">ECS Custom S&P</option>
+                  <option value="ecs-tree">ECS Tree</option>
+                  <option value="bitecs">bitECS S&P</option>
+                  <option value="wasm">WASM ECS S&P</option>
+                </select>
+              </div>
+              <button
+                id="btn-copy-results"
+                class="btn-copy"
+                title="Copy Results to Clipboard"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="copy-icon"
+                >
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path
+                    d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                  ></path>
+                </svg>
+              </button>
+            </div>
+            <div class="speedup-values" id="speedup-values-container">
+              <!-- Dynamic rows will be injected here -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. Graph Section -->
+      <section class="section-graph">
+        <div class="chart-header">
+          <div class="chart-title-group">
+            <h2>Execution Time Trend</h2>
+            <label class="toggle-label scale-toggle">
+              <input type="checkbox" id="toggle-log-scale" checked /> Log Scale
+            </label>
+            <label class="toggle-label scale-toggle">
+              <input type="checkbox" id="toggle-zero-baseline" /> Zero Baseline
+            </label>
+          </div>
+          <div class="chart-legend-container">
+            <div class="chart-legend">
+              <span class="legend-item" id="legend-item-oop"
+                ><span class="legend-color legend-oop"></span>OOP S&P</span
+              >
+              <span class="legend-item" id="legend-item-oop-tree"
+                ><span class="legend-color legend-oop-tree"></span>OOP
+                Tree</span
+              >
+              <span class="legend-item" id="legend-item-ecs"
+                ><span class="legend-color legend-ecs"></span>ECS Custom
+                S&P</span
+              >
+              <span class="legend-item" id="legend-item-ecs-tree"
+                ><span class="legend-color legend-ecs-tree"></span>ECS Custom
+                Tree</span
+              >
+              <span class="legend-item" id="legend-item-bitecs"
+                ><span class="legend-color legend-bitecs"></span>bitECS
+                S&P</span
+              >
+              <span class="legend-item" id="legend-item-wasm"
+                ><span class="legend-color legend-wasm"></span>WASM ECS
+                S&P</span
+              >
+            </div>
+            <span class="chart-frame-counter"
+              >Frame: <span id="chart-frame-index">0</span> /
+              <span id="chart-frame-total">1000</span></span
+            >
+          </div>
+        </div>
+        <div class="svg-container" id="svg-chart-container">
+          <!-- SVG Chart will be injected here -->
+        </div>
+      </section>
+
+      <!-- 4. Output (Visualizer) Section -->
+      <section class="section-output">
+        <h2>Live Visualizer Output</h2>
+        <div class="visualizer-grid">
+          <div class="canvas-card" id="card-canvas-oop">
+            <div class="canvas-header">
+              <h3>OOP S&P</h3>
+              <span class="render-fps" id="oop-fps">0 FPS</span>
+            </div>
+            <div class="canvas-container">
+              <canvas id="canvas-oop" width="1000" height="800"></canvas>
+            </div>
+          </div>
+
+          <div class="canvas-card" id="card-canvas-oop-tree">
+            <div class="canvas-header">
+              <h3>OOP Tree</h3>
+              <span class="render-fps" id="oop-tree-fps">0 FPS</span>
+            </div>
+            <div class="canvas-container">
+              <canvas id="canvas-oop-tree" width="1000" height="800"></canvas>
+            </div>
+          </div>
+
+          <div class="canvas-card" id="card-canvas-ecs">
+            <div class="canvas-header">
+              <h3>ECS Custom S&P</h3>
+              <span class="render-fps" id="ecs-fps">0 FPS</span>
+            </div>
+            <div class="canvas-container">
+              <canvas id="canvas-ecs" width="1000" height="800"></canvas>
+            </div>
+          </div>
+
+          <div class="canvas-card" id="card-canvas-ecs-tree">
+            <div class="canvas-header">
+              <h3>ECS Tree</h3>
+              <span class="render-fps" id="ecs-tree-fps">0 FPS</span>
+            </div>
+            <div class="canvas-container">
+              <canvas id="canvas-ecs-tree" width="1000" height="800"></canvas>
+            </div>
+          </div>
+
+          <div class="canvas-card" id="card-canvas-bitecs">
+            <div class="canvas-header">
+              <h3>bitECS S&P</h3>
+              <span class="render-fps" id="bitecs-fps">0 FPS</span>
+            </div>
+            <div class="canvas-container">
+              <canvas id="canvas-bitecs" width="1000" height="800"></canvas>
+            </div>
+          </div>
+
+          <div class="canvas-card" id="card-canvas-wasm">
+            <div class="canvas-header">
+              <h3>WASM ECS S&P</h3>
+              <span class="render-fps" id="wasm-fps">0 FPS</span>
+            </div>
+            <div class="canvas-container">
+              <canvas id="canvas-wasm" width="1000" height="800"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. Article Section -->
+      <section class="blog-section">
+        <h2 class="blog-title">
+          The Physics of Memory: ECS vs OOP Spatial Benchmark
+        </h2>
+        <div class="blog-meta">
+          Published June 2026 • Verified on Apple M4 Pro (5,000 Entities)
+        </div>
+
+        <article class="blog-article">
+          <p>
+            When writing high-performance code in modern engines, we are no
+            longer bottlenecked purely by raw CPU cycle speeds. Instead, we are
+            bottlenecked by the speed of retrieving data from main memory. This
+            spatial benchmark explores how data structures impact CPU cache
+            behavior, pitting traditional
+            <strong>Object-Oriented Programming (OOP)</strong> against a
+            Data-Oriented <strong>Entity Component System (ECS)</strong> using a
+            Sweep-and-Prune (S&P) collision engine.
+          </p>
+
+          <h3>MacBook Pro M4 Benchmark Results</h3>
+          <p>
+            The following table documents the benchmark results recorded on an
+            <strong>Apple M4 Pro chip</strong> running a simulation of
+            <strong>5,000 active physical entities</strong>:
+          </p>
+
+          <p>
+            *(Note: The library-based bitECS implementation was also tested and
+            performed virtually identical to our ECS S&P implementation.)*
+          </p>
+
+          <h4>1. Static Behavior (Absolute Coherence)</h4>
+          <div class="blog-table-container">
+            <table class="blog-table">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Paradigm</th>
+                  <th>Runtime</th>
+                  <th>Algorithm</th>
+                  <th>Avg Frame Time</th>
+                  <th>Speedup vs OOP S&P</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="legend-dot legend-wasm"></span></td>
+                  <td>ECS</td>
+                  <td>WASM</td>
+                  <td>Sweep & Prune</td>
+                  <td>0.138 ms</td>
+                  <td><span class="highlight-speedup">3.88x</span></td>
+                </tr>
+                <tr>
+                  <td><span class="legend-dot legend-ecs"></span></td>
+                  <td>ECS</td>
+                  <td>JS</td>
+                  <td>Sweep & Prune</td>
+                  <td>0.400 ms</td>
+                  <td><span class="highlight-speedup">1.34x</span></td>
+                </tr>
+                <tr>
+                  <td><span class="legend-dot legend-oop"></span></td>
+                  <td>OOP</td>
+                  <td>JS</td>
+                  <td>Sweep & Prune</td>
+                  <td>0.537 ms</td>
+                  <td>1.00x</td>
+                </tr>
+                <tr>
+                  <td><span class="legend-dot legend-oop-tree"></span></td>
+                  <td>OOP</td>
+                  <td>JS</td>
+                  <td>AABB Tree</td>
+                  <td>0.702 ms</td>
+                  <td>0.76x</td>
+                </tr>
+                <tr>
+                  <td><span class="legend-dot legend-ecs-tree"></span></td>
+                  <td>ECS</td>
+                  <td>JS</td>
+                  <td>AABB Tree</td>
+                  <td>0.762 ms</td>
+                  <td>0.70x</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h4>2. Wandering Behavior (High Coherence)</h4>
+          <div class="blog-table-container">
+            <table class="blog-table">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Paradigm</th>
+                  <th>Runtime</th>
+                  <th>Algorithm</th>
+                  <th>Avg Frame Time</th>
+                  <th>Speedup vs OOP S&P</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="legend-dot legend-wasm"></span></td>
+                  <td>ECS</td>
+                  <td>WASM</td>
+                  <td>Sweep & Prune</td>
+                  <td>0.307 ms</td>
+                  <td><span class="highlight-speedup">3.56x</span></td>
+                </tr>
+                <tr>
+                  <td><span class="legend-dot legend-ecs"></span></td>
+                  <td>ECS</td>
+                  <td>JS</td>
+                  <td>Sweep & Prune</td>
+                  <td>0.804 ms</td>
+                  <td><span class="highlight-speedup">1.36x</span></td>
+                </tr>
+                <tr>
+                  <td><span class="legend-dot legend-oop"></span></td>
+                  <td>OOP</td>
+                  <td>JS</td>
+                  <td>Sweep & Prune</td>
+                  <td>1.093 ms</td>
+                  <td>1.00x</td>
+                </tr>
+                <tr>
+                  <td><span class="legend-dot legend-ecs-tree"></span></td>
+                  <td>ECS</td>
+                  <td>JS</td>
+                  <td>AABB Tree</td>
+                  <td>2.471 ms</td>
+                  <td>0.44x</td>
+                </tr>
+                <tr>
+                  <td><span class="legend-dot legend-oop-tree"></span></td>
+                  <td>OOP</td>
+                  <td>JS</td>
+                  <td>AABB Tree</td>
+                  <td>2.752 ms</td>
+                  <td>0.40x</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h4>3. Erratic Behavior (Low Coherence)</h4>
+          <div class="blog-table-container">
+            <table class="blog-table">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Paradigm</th>
+                  <th>Runtime</th>
+                  <th>Algorithm</th>
+                  <th>Avg Frame Time</th>
+                  <th>Speedup vs OOP S&P</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="legend-dot legend-wasm"></span></td>
+                  <td>ECS</td>
+                  <td>WASM</td>
+                  <td>Sweep & Prune</td>
+                  <td>3.510 ms</td>
+                  <td><span class="highlight-speedup">3.57x</span></td>
+                </tr>
+                <tr>
+                  <td><span class="legend-dot legend-ecs"></span></td>
+                  <td>ECS</td>
+                  <td>JS</td>
+                  <td>Sweep & Prune</td>
+                  <td>4.630 ms</td>
+                  <td><span class="highlight-speedup">2.71x</span></td>
+                </tr>
+                <tr>
+                  <td><span class="legend-dot legend-ecs-tree"></span></td>
+                  <td>ECS</td>
+                  <td>JS</td>
+                  <td>AABB Tree</td>
+                  <td>5.025 ms</td>
+                  <td><span class="highlight-speedup">2.50x</span></td>
+                </tr>
+                <tr>
+                  <td><span class="legend-dot legend-oop-tree"></span></td>
+                  <td>OOP</td>
+                  <td>JS</td>
+                  <td>AABB Tree</td>
+                  <td>5.247 ms</td>
+                  <td><span class="highlight-speedup">2.39x</span></td>
+                </tr>
+                <tr>
+                  <td><span class="legend-dot legend-oop"></span></td>
+                  <td>OOP</td>
+                  <td>JS</td>
+                  <td>Sweep & Prune</td>
+                  <td>12.542 ms</td>
+                  <td>1.00x</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3>Understanding the Simulation Modes</h3>
+          <p>
+            The performance of the Sweep-and-Prune (S&P) broadphase is likely
+            heavily tied to <strong>spatial coherence</strong>—the
+            frame-to-frame stability of entity coordinates. This benchmark
+            allows you to toggle between three coherence profiles:
+          </p>
+          <ul>
+            <li>
+              <strong>Wandering Mode (High Coherence)</strong>: Entities move
+              smoothly along continuous pathways. Because their relative order
+              along the X-axis changes very little from frame to frame, the axis
+              remains almost completely sorted. This allows the broadphase
+              Insertion Sort to run in near-linear time ($O(n)$) in most frames.
+              This represents typical real-time game simulation physics.
+            </li>
+            <li>
+              <strong>Erratic Mode (Low Coherence)</strong>: Entities teleport
+              randomly across the canvas each frame, simulating extreme scene
+              changes. This typically breaks frame-to-frame spatial sorting. The
+              broadphase is forced to re-sort the axis from scratch, degrading
+              Insertion Sort to its worst-case quadratic complexity ($O(n^2)$)
+              and showing how different memory layouts handle massive cache
+              thrashing.
+            </li>
+            <li>
+              <strong>Static Mode (Absolute Coherence)</strong>: Entities remain
+              completely stationary. Positions never change, requiring zero
+              sorting operations. This isolates the sweep overlap checks (AABB
+              bounding box tests), indicating potential read-performance
+              differences.
+            </li>
+          </ul>
+
+          <h3>Key Takeaways & Technical Analysis</h3>
+
+          <h4>1. High Spatial Coherence Keeps Sorting Cheap ($O(n)$)</h4>
+          <p>
+            Under <strong>Static</strong> and <strong>Wandering</strong> modes,
+            the circles maintain their spatial positions frame-to-frame. Because
+            the list is already nearly sorted, S&P's sorting phase completes in
+            near-linear time ($O(n)$). Here, the timed benchmark is likely
+            dominated by the sweep phase (AABB overlap checks).
+          </p>
+          <p>
+            Even with sorting overhead minimized, the ECS implementations
+            achieve up to a <strong>3.56x speedup</strong>
+            (with WASM ECS running at 0.307 ms vs OOP's 1.093 ms). Under OOP,
+            resolving Y-overlaps likely requires dereferencing scattered heap
+            objects to pull their `y` and `h` variables. In the ECS, these
+            components are loaded contiguously from flat arrays.
+          </p>
+
+          <h4>2. The Cache Co-location Optimization</h4>
+          <p>
+            During early optimization, a pure Struct-of-Arrays (SoA) layout was
+            used. However, it appeared that during the sweep overlap check, the
+            CPU was likely making separate reads to independent `posY`, `w`, and
+            `h` arrays.
+          </p>
+          <p>
+            To improve L1/L2 cache line efficiency, we redesigned the layout:
+          </p>
+          <ul>
+            <li>
+              <strong>Isolated `posX` (Float64Array)</strong>: Keeps sorting
+              entirely contiguous, allowing the CPU to load exactly 8
+              X-coordinates per 64-byte cache line request.
+            </li>
+            <li>
+              <strong>Interleaved `posYwh` (Float64Array)</strong>: Combines
+              `y`, `w`, and `h` into a single packed array (`[y, w, h]` - 24
+              bytes per entity). When the sweep phase detects an X-axis overlap,
+              the CPU can load the Y coordinate, width, and height together in a
+              single cache line transaction, likely reducing extra memory hops.
+            </li>
+          </ul>
+
+          <h4>3. Erratic Mode: The Cache Miss Meltdown ($O(n^2)$)</h4>
+          <p>
+            Under <strong>Erratic</strong> mode, entities teleport randomly.
+            This breaks spatial coherence and causes Insertion Sort to degrade
+            to its worst-case quadratic complexity ($O(n^2)$). The CPU is then
+            forced to perform millions of comparisons and swaps to re-sort the
+            axis.
+          </p>
+          <p>
+            While both systems drop in performance, the ECS implementations
+            maintain up to a massive <strong>3.57x speedup</strong> (with
+            WebAssembly ECS running at 3.510 ms vs OOP's 12.542 ms). In the OOP
+            loop, swap operations involve moving references inside the scrambled
+            `entities` array, which likely causes CPU cache stalls as the
+            processor waits for RAM requests. In the ECS, the sort swaps
+            integers in a flat contiguous `indices` array and checks positions
+            in `posX`. The CPU pre-fetcher can load the X positions sequentially
+            into cache, which likely allows the hardware to execute comparisons
+            more efficiently.
+          </p>
+
+          <h4>4. OOP Tree vs ECS Tree: Flat BVH vs Pointer Chasing</h4>
+          <p>
+            To further illustrate the impact of memory layout, we compared two
+            Bounding Volume Hierarchy solvers: **OOP Tree** and **ECS Custom
+            Tree**. Theoretically, hierarchical bounding tree updates take
+            $O(\log n)$ per entity, and overlap queries take $O(n \log n)$,
+            which is algorithmically superior to Sweep-and-Prune's worst-case
+            $O(n^2)$ in Erratic mode.
+          </p>
+          <p>
+            However, their memory layouts lead to vastly different CPU cache
+            efficiencies:
+          </p>
+          <ul>
+            <li>
+              <strong>OOP Tree (Pointer Chasing)</strong>: The tree nodes are
+              independent JavaScript objects allocated dynamically on the heap.
+              Traversing this tree for overlap queries requires dereferencing
+              node pointers sequentially. This "pointer-chasing" behavior causes
+              severe cache thrashing, as node data is scrambled across the heap.
+            </li>
+            <li>
+              <strong>ECS Tree (Flat BVH)</strong>: The tree nodes are packed
+              into flat, contiguous typed arrays (`Int32Array`, `Float64Array`).
+              Children and parents are referenced by flat array indices instead
+              of heap pointers. Traversing the tree involves reading sequential
+              elements, which matches the CPU's memory pre-fetch patterns and
+              runs much faster than its OOP counterpart.
+            </li>
+          </ul>
+
+          <h4>
+            5. Scaling Limits: When $O(n \log n)$ Trees Overtake $O(n^2)$ S&P
+          </h4>
+          <p>
+            While Sweep-and-Prune (S&P) dominates at smaller entity counts
+            (5,000 entities) even under low coherence, algorithmic complexity
+            eventually dominates memory layout efficiency as the simulation
+            scales. The following table showcases a high-entity-count test
+            (<strong>14,200 entities</strong>) in <strong>Erratic Mode</strong>:
+          </p>
+
+          <div class="blog-table-container">
+            <table class="blog-table">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Paradigm</th>
+                  <th>Runtime</th>
+                  <th>Algorithm</th>
+                  <th>Avg Frame Time</th>
+                  <th>99th Percentile</th>
+                  <th>Speedup vs OOP S&P</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="legend-dot legend-ecs-tree"></span></td>
+                  <td>ECS</td>
+                  <td>JS</td>
+                  <td>AABB Tree</td>
+                  <td>16.007 ms</td>
+                  <td>17.200 ms</td>
+                  <td><span class="highlight-speedup">6.21x</span></td>
+                </tr>
+                <tr>
+                  <td><span class="legend-dot legend-oop-tree"></span></td>
+                  <td>OOP</td>
+                  <td>JS</td>
+                  <td>AABB Tree</td>
+                  <td>18.133 ms</td>
+                  <td>24.500 ms</td>
+                  <td><span class="highlight-speedup">5.48x</span></td>
+                </tr>
+                <tr>
+                  <td><span class="legend-dot legend-wasm"></span></td>
+                  <td>ECS</td>
+                  <td>WASM</td>
+                  <td>Sweep & Prune</td>
+                  <td>27.437 ms</td>
+                  <td>28.300 ms</td>
+                  <td><span class="highlight-speedup">3.62x</span></td>
+                </tr>
+                <tr>
+                  <td><span class="legend-dot legend-ecs"></span></td>
+                  <td>ECS</td>
+                  <td>JS</td>
+                  <td>Sweep & Prune</td>
+                  <td>37.769 ms</td>
+                  <td>46.300 ms</td>
+                  <td><span class="highlight-speedup">2.63x</span></td>
+                </tr>
+                <tr>
+                  <td><span class="legend-dot legend-oop"></span></td>
+                  <td>OOP</td>
+                  <td>JS</td>
+                  <td>Sweep & Prune</td>
+                  <td>99.397 ms</td>
+                  <td>219.400 ms</td>
+                  <td>1.00x</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            At 14,200 entities under Erratic mode, the $O(n^2)$ sorting overhead
+            of S&P becomes overwhelming (over 200 million possible index swap
+            comparisons). Despite WASM S&P's cache efficiency, the $O(n \log n)$
+            tree-hierarchy implementations (both OOP and ECS Tree) run
+            significantly faster. Notably, <strong>ECS Tree</strong> remains the
+            absolute fastest overall (<strong>16.007 ms</strong>) by combining
+            the algorithmic benefits of trees with a cache-friendly flat memory
+            layout.
+          </p>
+        </article>
+      </section>
+
+      <footer class="main-footer">
+        <p>&copy; 2026 Performance benchmarking suite for ECS architectures.</p>
+      </footer>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
