@@ -482,7 +482,23 @@
             </li>
           </ul>
 
-          <h4>3. Erratic Mode: The Cache Miss Meltdown ($O(n^2)$)</h4>
+          <h4>3. Optimized Sorting Implementations</h4>
+          <p>
+            To ensure a fair comparison between the paradigms, the Sweep-and-Prune algorithms do not use basic, unoptimized sorting implementations. Instead, they use memory-aligned and hybrid strategies:
+          </p>
+          <ul>
+            <li>
+              <strong>Memory-Optimized ECS Sorting</strong>: Rather than moving multi-component data dynamically on every swap, we sort a single flat index array (like an <code>Int32Array</code>) referencing the coordinates. This minimizes data writes and keeps iterations cache-friendly.
+            </li>
+            <li>
+              <strong>Hybrid Pivot Selection</strong>: Both native JavaScript and WASM (AssemblyScript) Quicksort implementations select a median/midpoint pivot to avoid worst-case $O(n^2)$ complexity on pre-sorted data. They also fall back to a tight Insertion Sort range once subarray sizes fall below 12 elements, avoiding V8/WASM function recursion overhead.
+            </li>
+            <li>
+              <strong>Double-Buffered (Ping-Pong) Mergesort</strong>: Our Mergesort implementations avoid copying elements back to the main array at the end of each merge step. By alternating source and destination buffers at each recursion level, we eliminate millions of array write operations per frame.
+            </li>
+          </ul>
+
+          <h4>4. Erratic Mode: The Cache Miss Meltdown ($O(n^2)$)</h4>
           <p>
             Under <strong>Erratic</strong> mode, entities teleport randomly.
             This breaks spatial coherence and causes Insertion Sort to degrade
@@ -503,7 +519,7 @@
             more efficiently.
           </p>
 
-          <h4>4. OOP Tree vs ECS Tree: Flat BVH vs Pointer Chasing</h4>
+          <h4>5. OOP Tree vs ECS Tree: Flat BVH vs Pointer Chasing</h4>
           <p>
             To further illustrate the impact of memory layout, we compared two
             Bounding Volume Hierarchy solvers: **OOP Tree** and **ECS Custom
@@ -535,7 +551,7 @@
           </ul>
 
           <h4>
-            5. Scaling Limits: When $O(n \log n)$ Trees Overtake $O(n^2)$ S&P
+            6. Scaling Limits: When $O(n \log n)$ Trees Overtake $O(n^2)$ S&P
           </h4>
           <p>
             While Sweep-and-Prune (S&P) dominates at smaller entity counts

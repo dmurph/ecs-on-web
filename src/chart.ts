@@ -362,7 +362,7 @@ export function drawChartSVG(
       const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
       path.setAttribute("fill", "none");
       path.setAttribute("stroke", sim.color);
-      path.setAttribute("stroke-width", "2.5");
+      path.setAttribute("stroke-width", "1.5");
       path.setAttribute("stroke-linecap", "round");
       path.setAttribute("stroke-linejoin", "round");
       path.setAttribute("class", `line-${sim.id}`);

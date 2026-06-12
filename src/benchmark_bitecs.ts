@@ -69,6 +69,8 @@ export function runBroadphase(
     quickSortBitecs(entities, PositionX.value, 0, len - 1);
   } else if (sortType === 'merge' && tempEntities) {
     mergeSortBitecs(entities, PositionX.value, tempEntities, 0, len - 1);
+  } else if (sortType === 'native') {
+    entities.sort((a, b) => PositionX.value[a] - PositionX.value[b]);
   }
 
   // 2. Sweep

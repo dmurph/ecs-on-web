@@ -68,6 +68,8 @@ export function runBroadphase(
     quickSortCustomECS(indices, posX, 0, len - 1);
   } else if (sortType === 'merge' && tempIndices) {
     mergeSortCustomECS(indices, posX, tempIndices, 0, len - 1);
+  } else if (sortType === 'native') {
+    indices.sort((a, b) => posX[a] - posX[b]);
   }
 
   // 2. Sweep: Read X coordinates and Y overlap

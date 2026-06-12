@@ -45,6 +45,8 @@ setEcsDebug(false);
 console.log("Starting simulation parity check...");
 let mismatchCount = 0;
 
+const simIds = ['oop', 'oop-tree', 'ecs', 'ecs-tree', 'bitecs'];
+
 for (let frame = 1; frame <= totalFrames; frame++) {
   const framePrng = new SeededPRNG();
   const frameSeed = frame; // same seed formula as in main.ts loop
@@ -52,10 +54,12 @@ for (let frame = 1; frame <= totalFrames; frame++) {
 
   const results: Record<string, { collisionCount: number; positions: any[] }> = {};
 
-  for (const sim of simulators) {
+  for (let idx = 0; idx < simulators.length; idx++) {
+    const sim = simulators[idx];
+    const id = simIds[idx];
     framePrng.setSeed(frameSeed);
     const updateResult = sim.update(w, h, speedMultiplier, behavior, framePrng);
-    results[sim.id] = {
+    results[id] = {
       collisionCount: updateResult.collisionCount,
       positions: sim.getPositions()
     };

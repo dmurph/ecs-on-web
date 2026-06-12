@@ -136,9 +136,30 @@ export function updateMovement(
   }
 }
 
+// Insertion Sort range helper
+function insertionSortRange(left: i32, right: i32): void {
+  const localIndices = indices;
+  const localPosX = posX;
+  for (let i = left + 1; i <= right; i++) {
+    const currIdx = unchecked(localIndices[i]);
+    const currX = unchecked(localPosX[currIdx]);
+    let j = i - 1;
+    while (j >= left) {
+      const prevIdx = unchecked(localIndices[j]);
+      if (unchecked(localPosX[prevIdx]) <= currX) break;
+      unchecked(localIndices[j + 1] = prevIdx);
+      j--;
+    }
+    unchecked(localIndices[j + 1] = currIdx);
+  }
+}
+
 // Quick Sort
 function quickSort(left: i32, right: i32): void {
-  if (left >= right) return;
+  if (right - left < 12) {
+    insertionSortRange(left, right);
+    return;
+  }
   const pivotIdx = partition(left, right);
   quickSort(left, pivotIdx - 1);
   quickSort(pivotIdx + 1, right);
@@ -166,41 +187,41 @@ function partition(left: i32, right: i32): i32 {
   return i + 1;
 }
 
-// Merge Sort
-function mergeSort(left: i32, right: i32): void {
-  if (left >= right) return;
+// Merge Sort (Ping-Pong / Double-Buffering)
+function mergeSortPingPongRec(src: StaticArray<i32>, dst: StaticArray<i32>, left: i32, right: i32): void {
+  if (right - left < 12) {
+    insertionSortRange(left, right);
+    for (let m = left; m <= right; m++) {
+      unchecked(src[m] = dst[m]);
+    }
+    return;
+  }
+  
   const mid = (left + right) >> 1;
-  mergeSort(left, mid);
-  mergeSort(mid + 1, right);
-  merge(left, mid, right);
-}
-
-function merge(left: i32, mid: i32, right: i32): void {
+  mergeSortPingPongRec(dst, src, left, mid);
+  mergeSortPingPongRec(dst, src, mid + 1, right);
+  
   let i = left;
   let j = mid + 1;
   let k = left;
 
   while (i <= mid && j <= right) {
-    const idxI = unchecked(indices[i]);
-    const idxJ = unchecked(indices[j]);
+    const idxI = unchecked(src[i]);
+    const idxJ = unchecked(src[j]);
     if (unchecked(posX[idxI]) <= unchecked(posX[idxJ])) {
-      unchecked(tempIndices[k++] = idxI);
+      unchecked(dst[k++] = idxI);
       i++;
     } else {
-      unchecked(tempIndices[k++] = idxJ);
+      unchecked(dst[k++] = idxJ);
       j++;
     }
   }
 
   while (i <= mid) {
-    unchecked(tempIndices[k++] = unchecked(indices[i++]));
+    unchecked(dst[k++] = unchecked(src[i++]));
   }
   while (j <= right) {
-    unchecked(tempIndices[k++] = unchecked(indices[j++]));
-  }
-
-  for (let m = left; m <= right; m++) {
-    unchecked(indices[m] = unchecked(tempIndices[m]));
+    unchecked(dst[k++] = unchecked(src[j++]));
   }
 }
 
@@ -226,7 +247,10 @@ export function runBroadphaseSort(sortType: i32): void {
   } else if (sortType == 1) { // quick
     quickSort(0, len - 1);
   } else if (sortType == 2) { // merge
-    mergeSort(0, len - 1);
+    for (let i = 0; i < len; i++) {
+      unchecked(tempIndices[i] = indices[i]);
+    }
+    mergeSortPingPongRec(tempIndices, indices, 0, len - 1);
   }
 }
 
