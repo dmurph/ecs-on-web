@@ -2,6 +2,11 @@ import { ENTITY_COLORS, ENTITY_MAX_SPEED } from './config';
 import { SeededPRNG } from './prng';
 import type { Simulator, EntityState } from './simulator';
 import { renderCanvas } from './renderer';
+import {
+  insertionSortCustomECS,
+  quickSortCustomECS,
+  mergeSortCustomECS
+} from './sorting';
 
 export interface ECSData {
   posX: Float64Array;
@@ -48,22 +53,21 @@ export function runBroadphase(
   posX: Float64Array,
   posYwh: Float64Array,
   outPairs: Int32Array,
-  ids: Int32Array
+  ids: Int32Array,
+  sortType: 'insertion' | 'quick' | 'merge' | 'native' = 'insertion',
+  tempIndices?: Int32Array
 ): number {
   let pairCount = 0;
   const len = indices.length;
   const maxPairs = outPairs.length / 2;
 
-  // 1. Insertion Sort: runs in near-linear O(n) time when data exhibits high spatial coherence
-  for (let i = 1; i < len; i++) {
-    const currIdx = indices[i];
-    const currX = posX[currIdx]; 
-    let j = i - 1;
-    while (j >= 0 && posX[indices[j]] > currX) {
-      indices[j + 1] = indices[j];
-      j--;
-    }
-    indices[j + 1] = currIdx;
+  // 1. Sort indices based on chosen algorithm
+  if (sortType === 'insertion') {
+    insertionSortCustomECS(indices, posX);
+  } else if (sortType === 'quick') {
+    quickSortCustomECS(indices, posX, 0, len - 1);
+  } else if (sortType === 'merge' && tempIndices) {
+    mergeSortCustomECS(indices, posX, tempIndices, 0, len - 1);
   }
 
   // 2. Sweep: Read X coordinates and Y overlap
@@ -232,11 +236,12 @@ export function updateMovement(
  * checking bounds by indexing directly into component arrays.
  */
 export class CustomECSSimulator implements Simulator {
-  id = 'ecs';
-  name = 'ECS Custom S&P';
-  color = '#0d9488';
+  id: string;
+  name: string;
+  private sortType: 'insertion' | 'quick' | 'merge' | 'native';
 
   private ecsData: ECSData | null = null;
+  private tempIndices: Int32Array = new Int32Array(0);
   private times: number[] = [];
   private colliding = new Uint8Array(0);
   private pairsBuffer = new Int32Array(0);
@@ -244,11 +249,22 @@ export class CustomECSSimulator implements Simulator {
   private lastCollisionCount = 0;
   private pairsCount = 0;
 
+  constructor(
+    sortType: 'insertion' | 'quick' | 'merge' | 'native' = 'insertion',
+    id = 'ecs',
+    name = 'ECS Custom S&P'
+  ) {
+    this.sortType = sortType;
+    this.id = id;
+    this.name = name;
+  }
+
   /**
    * Allocates flat component typed arrays inside ECSData.
    */
   init(numEntities: number, width: number, height: number, _prng: SeededPRNG) {
     this.ecsData = createECSData(numEntities, width, height);
+    this.tempIndices = new Int32Array(numEntities);
     this.colliding = new Uint8Array(numEntities);
     this.pairsBuffer = new Int32Array(this.maxCollisions * 2);
     this.lastCollisionCount = 0;
@@ -274,7 +290,9 @@ export class CustomECSSimulator implements Simulator {
         this.ecsData.posX,
         this.ecsData.posYwh,
         this.pairsBuffer,
-        this.ecsData.id
+        this.ecsData.id,
+        this.sortType,
+        this.tempIndices
       );
       
       this.colliding.fill(0);

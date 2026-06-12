@@ -760,9 +760,13 @@ export function resolveCollisions(
  * Simulator representing a Custom flat ECS engine using a pre-allocated flat AABB Tree for broadphase.
  */
 export class ECSTreeSimulator implements Simulator {
-  id = 'ecs-tree';
-  name = 'ECS Custom Tree';
-  color = '#f59e0b';
+  id: string;
+  name: string;
+
+  constructor(id = 'ecs-tree', name = 'ECS Tree') {
+    this.id = id;
+    this.name = name;
+  }
 
   private ecsData: ECSData | null = null;
   private entityLeaf: Int32Array = new Int32Array(0); // maps entity id to tree leaf node idx

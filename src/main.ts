@@ -1,16 +1,11 @@
 import type { Simulator } from './simulator';
-import { OOPSimulator } from './benchmark_oop';
-import { OOPTreeSimulator } from './benchmark_oop_tree';
-import { CustomECSSimulator } from './benchmark_custom_ecs';
-import { ECSTreeSimulator } from './benchmark_ecs_tree';
-import { BitECSSimulator } from './benchmark_bitecs';
-import { WasmECSSimulator } from './benchmark_wasm_ecs';
+import { SIMULATOR_REGISTRY } from './registry';
 import { drawChartSVG, resetChartLabels } from './chart';
 import {
   initUI,
   setupUIListeners,
   setupResizeListener,
-  getCanvases,
+  canvases,
   updateUI,
   updateStatus,
   updateFps,
@@ -41,25 +36,14 @@ let currentFrame = 0;
 let animationFrameId: number | null = null;
 let totalFramesProcessed = 0;
 
-const simulators: Simulator[] = [
-  new OOPSimulator(),
-  new OOPTreeSimulator(),
-  new CustomECSSimulator(),
-  new ECSTreeSimulator(),
-  new BitECSSimulator(),
-  new WasmECSSimulator()
-];
+const simulators: Simulator[] = SIMULATOR_REGISTRY.map(sim => sim.createInstance());
 
-let activeSimulators: Simulator[] = [...simulators];
+let activeSimulators: Simulator[] = simulators.filter((_, idx) => SIMULATOR_REGISTRY[idx].activeByDefault);
 
-const prngs: Record<string, SeededPRNG> = {
-  oop: new SeededPRNG(),
-  'oop-tree': new SeededPRNG(),
-  ecs: new SeededPRNG(),
-  'ecs-tree': new SeededPRNG(),
-  bitecs: new SeededPRNG(),
-  wasm: new SeededPRNG()
-};
+const prngs: Record<string, SeededPRNG> = {};
+SIMULATOR_REGISTRY.forEach(sim => {
+  prngs[sim.id] = new SeededPRNG();
+});
 
 // FPS tracking for render performance
 let lastRenderTime = 0;
@@ -118,20 +102,22 @@ function handleCopy() {
 
 // === INITIALIZATION & SETUP ===
 function initEntities() {
-  const { canvasOOP } = getCanvases();
-  const w = canvasOOP.width;
-  const h = canvasOOP.height;
+  const firstCanvas = Object.values(canvases)[0];
+  const w = firstCanvas ? firstCanvas.width : 1000;
+  const h = firstCanvas ? firstCanvas.height : 800;
 
   for (const sim of simulators) {
     sim.init(numEntities, w, h, prngs[sim.id]);
   }
 
   // Sync initial positions to ensure identical starting states
-  const oopSim = simulators.find(s => s.id === 'oop')!;
-  const oopPositions = oopSim.getPositions();
-  for (const sim of simulators) {
-    if (sim !== oopSim) {
-      sim.setPositions(oopPositions);
+  const baselineSim = simulators[0];
+  if (baselineSim) {
+    const baselinePositions = baselineSim.getPositions();
+    for (const sim of simulators) {
+      if (sim !== baselineSim) {
+        sim.setPositions(baselinePositions);
+      }
     }
   }
 }
@@ -180,14 +166,12 @@ function resetBenchmark() {
 }
 
 function drawChart() {
-  const oopTimes = activeSimulators.some(s => s.id === 'oop') ? simulators.find(s => s.id === 'oop')!.getTimes() : [];
-  const oopTreeTimes = activeSimulators.some(s => s.id === 'oop-tree') ? simulators.find(s => s.id === 'oop-tree')!.getTimes() : [];
-  const ecsTimes = activeSimulators.some(s => s.id === 'ecs') ? simulators.find(s => s.id === 'ecs')!.getTimes() : [];
-  const ecsTreeTimes = activeSimulators.some(s => s.id === 'ecs-tree') ? simulators.find(s => s.id === 'ecs-tree')!.getTimes() : [];
-  const bitecsTimes = activeSimulators.some(s => s.id === 'bitecs') ? simulators.find(s => s.id === 'bitecs')!.getTimes() : [];
-  const wasmTimes = activeSimulators.some(s => s.id === 'wasm') ? simulators.find(s => s.id === 'wasm')!.getTimes() : [];
+  const timesMap: Record<string, number[]> = {};
+  activeSimulators.forEach(sim => {
+    timesMap[sim.id] = sim.getTimes();
+  });
   
-  drawChartSVG('svg-chart-container', oopTimes, oopTreeTimes, ecsTimes, ecsTreeTimes, bitecsTimes, wasmTimes, benchmarkLength, useLogScale, useZeroBaseline);
+  drawChartSVG('svg-chart-container', timesMap, benchmarkLength, useLogScale, useZeroBaseline);
 }
 
 function startBenchmark() {
@@ -238,8 +222,11 @@ function loop() {
   fpsTimer += dt;
   frameCount++;
   if (fpsTimer >= 1000) {
-    const getFps = (id: string) => activeSimulators.some(s => s.id === id) ? frameCount : 0;
-    updateFps(getFps('oop'), getFps('oop-tree'), getFps('ecs'), getFps('ecs-tree'), getFps('bitecs'), getFps('wasm'));
+    const fpsMap: Record<string, number> = {};
+    SIMULATOR_REGISTRY.forEach(sim => {
+      fpsMap[sim.id] = activeSimulators.some(s => s.id === sim.id) ? frameCount : 0;
+    });
+    updateFps(fpsMap);
     frameCount = 0;
     fpsTimer = 0;
   }
@@ -252,9 +239,9 @@ function loop() {
   totalFramesProcessed++;
 
   // 2. RUN TIMED BENCHMARKS & PHYSICS RESOLUTION
-  const { canvasOOP } = getCanvases();
-  const w = canvasOOP.width;
-  const h = canvasOOP.height;
+  const firstCanvas = Object.values(canvases)[0];
+  const w = firstCanvas ? firstCanvas.width : 1000;
+  const h = firstCanvas ? firstCanvas.height : 800;
 
   const times: Record<string, number> = {};
   const collisionCounts: Record<string, number> = {};
@@ -279,43 +266,20 @@ function loop() {
   } else {
     currentFrame++;
     
-    const getSimData = (id: string) => {
-      const sim = simulators.find(s => s.id === id)!;
-      const isActive = activeSimulators.includes(sim);
-      return {
-        time: isActive ? times[id] : 0,
-        count: isActive ? collisionCounts[id] : 0,
-        times: sim.getTimes()
-      };
-    };
-
-    const oopData = getSimData('oop');
-    const oopTreeData = getSimData('oop-tree');
-    const ecsData = getSimData('ecs');
-    const ecsTreeData = getSimData('ecs-tree');
-    const bitecsData = getSimData('bitecs');
-    const wasmData = getSimData('wasm');
+    const timesMap: Record<string, number> = {};
+    const historyMap: Record<string, number[]> = {};
+    
+    SIMULATOR_REGISTRY.forEach(sim => {
+      const instantiatedSim = simulators.find(s => s.id === sim.id)!;
+      const isActive = activeSimulators.includes(instantiatedSim);
+      timesMap[sim.id] = isActive ? times[sim.id] : 0;
+      historyMap[sim.id] = instantiatedSim.getTimes();
+    });
 
     updateMetricsDisplay({
       currentFrame,
-      oopTime: oopData.time,
-      oopTreeTime: oopTreeData.time,
-      ecsTime: ecsData.time,
-      ecsTreeTime: ecsTreeData.time,
-      bitecsTime: bitecsData.time,
-      wasmTime: wasmData.time,
-      oopCount: oopData.count,
-      oopTreeCount: oopTreeData.count,
-      ecsCount: ecsData.count,
-      ecsTreeCount: ecsTreeData.count,
-      bitecsCount: bitecsData.count,
-      wasmCount: wasmData.count,
-      oopTimes: oopData.times,
-      oopTreeTimes: oopTreeData.times,
-      ecsTimes: ecsData.times,
-      ecsTreeTimes: ecsTreeData.times,
-      bitecsTimes: bitecsData.times,
-      wasmTimes: wasmData.times,
+      times: timesMap,
+      history: historyMap,
       activeSimulators: activeSimulators.map(s => s.id),
       baselineSimulatorId
     });
@@ -350,55 +314,31 @@ function finishBenchmark() {
 // === RUN INITIAL SETUP ===
 initUI();
 updateBaselineOptions(activeSimulators.map(s => s.id), baselineSimulatorId);
-const canvases = getCanvases();
 
-contexts = {
-  oop: canvases.canvasOOP.getContext('2d')!,
-  'oop-tree': canvases.canvasOOPTree.getContext('2d')!,
-  ecs: canvases.canvasECS.getContext('2d')!,
-  'ecs-tree': canvases.canvasECSTree.getContext('2d')!,
-  bitecs: canvases.canvasBitecs.getContext('2d')!,
-  wasm: canvases.canvasWasm.getContext('2d')!
-};
+contexts = {};
+SIMULATOR_REGISTRY.forEach(sim => {
+  const canvas = canvases[sim.id];
+  if (canvas) {
+    contexts[sim.id] = canvas.getContext('2d')!;
+  }
+});
 
 function triggerMetricsUpdate() {
-  const getSimData = (id: string) => {
-    const sim = simulators.find(s => s.id === id)!;
-    const isActive = activeSimulators.includes(sim);
-    return {
-      time: isActive ? (sim.getTimes()[sim.getTimes().length - 1] || 0) : 0,
-      count: 0,
-      times: sim.getTimes()
-    };
-  };
+  const timesMap: Record<string, number> = {};
+  const historyMap: Record<string, number[]> = {};
 
-  const oopData = getSimData('oop');
-  const oopTreeData = getSimData('oop-tree');
-  const ecsData = getSimData('ecs');
-  const ecsTreeData = getSimData('ecs-tree');
-  const bitecsData = getSimData('bitecs');
-  const wasmData = getSimData('wasm');
+  SIMULATOR_REGISTRY.forEach(sim => {
+    const instantiatedSim = simulators.find(s => s.id === sim.id)!;
+    const isActive = activeSimulators.includes(instantiatedSim);
+    const times = instantiatedSim.getTimes();
+    timesMap[sim.id] = isActive ? (times[times.length - 1] || 0) : 0;
+    historyMap[sim.id] = times;
+  });
 
   updateMetricsDisplay({
     currentFrame,
-    oopTime: oopData.time,
-    oopTreeTime: oopTreeData.time,
-    ecsTime: ecsData.time,
-    ecsTreeTime: ecsTreeData.time,
-    bitecsTime: bitecsData.time,
-    wasmTime: wasmData.time,
-    oopCount: oopData.count,
-    oopTreeCount: oopTreeData.count,
-    ecsCount: ecsData.count,
-    ecsTreeCount: ecsTreeData.count,
-    bitecsCount: bitecsData.count,
-    wasmCount: wasmData.count,
-    oopTimes: oopData.times,
-    oopTreeTimes: oopTreeData.times,
-    ecsTimes: ecsData.times,
-    ecsTreeTimes: ecsTreeData.times,
-    bitecsTimes: bitecsData.times,
-    wasmTimes: wasmData.times,
+    times: timesMap,
+    history: historyMap,
     activeSimulators: activeSimulators.map(s => s.id),
     baselineSimulatorId
   });

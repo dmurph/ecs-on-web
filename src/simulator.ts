@@ -32,10 +32,7 @@ export interface Simulator {
    */
   name: string;
   
-  /**
-   * Primary color code used for chart plotting and visualizer rendering.
-   */
-  color: string;
+
   
   /**
    * Allocates internal structures and spawns entities.

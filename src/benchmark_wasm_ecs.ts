@@ -7,46 +7,60 @@ import type { ECSData } from './benchmark_custom_ecs';
 // Fetch and compile WebAssembly module synchronously/top-level await
 const response = await fetch('./benchmark_wasm_ecs.wasm');
 const buffer = await response.arrayBuffer();
-const { instance } = await WebAssembly.instantiate(buffer, {
-  env: {
-    abort: (msg: any, file: any, line: any, col: any) => {
-      console.error(`abort called: ${msg} at ${file}:${line}:${col}`);
-    }
-  }
-});
-const wasm = instance.exports as any;
+const wasmModule = await WebAssembly.compile(buffer);
 
 export class WasmECSSimulator implements Simulator {
-  id = 'wasm';
-  name = 'WASM ECS S&P';
-  color = '#e11d48'; // Use custom rose/pink neon color for WASM
+  id: string;
+  name: string;
+  private sortType: 'insertion' | 'quick' | 'merge' | 'native';
 
+  private wasm: any = null;
   private ecsData: ECSData | null = null;
   private times: number[] = [];
   private colliding = new Uint8Array(0);
   private pairsBuffer = new Int32Array(0);
   private lastCollisionCount = 0;
 
+  constructor(
+    sortType: 'insertion' | 'quick' | 'merge' | 'native' = 'insertion',
+    id = 'wasm',
+    name = 'WASM ECS S&P'
+  ) {
+    this.sortType = sortType;
+    this.id = id;
+    this.name = name;
+  }
+
   init(numEntities: number, _width: number, _height: number, _prng: SeededPRNG) {
+    // Instantiate an independent WASM instance for this simulator to isolate memory/globals
+    const instance = new WebAssembly.Instance(wasmModule, {
+      env: {
+        abort: (msg: any, file: any, line: any, col: any) => {
+          console.error(`abort called: ${msg} at ${file}:${line}:${col}`);
+        }
+      }
+    });
+    this.wasm = instance.exports as any;
+
     const maxCollisions = 200000;
     
     // Allocate buffers inside WASM
-    wasm.init(numEntities, maxCollisions);
+    this.wasm.init(numEntities, maxCollisions);
 
     // Get pointers and create JS views mapping to WASM memory
-    const memoryBuffer = (wasm.memory as WebAssembly.Memory).buffer;
-    const posX = new Float64Array(memoryBuffer, wasm.getPosXPtr(), numEntities);
-    const posYwh = new Float64Array(memoryBuffer, wasm.getPosYwhPtr(), numEntities * 3);
-    const colorId = new Uint8Array(memoryBuffer, wasm.getColorIdPtr(), numEntities);
-    const vx = new Float64Array(memoryBuffer, wasm.getVxPtr(), numEntities);
-    const vy = new Float64Array(memoryBuffer, wasm.getVyPtr(), numEntities);
-    const angle = new Float64Array(memoryBuffer, wasm.getAnglePtr(), numEntities);
-    const indices = new Int32Array(memoryBuffer, wasm.getIndicesPtr(), numEntities);
-    const id = new Int32Array(memoryBuffer, wasm.getIdPtr(), numEntities);
+    const memoryBuffer = (this.wasm.memory as WebAssembly.Memory).buffer;
+    const posX = new Float64Array(memoryBuffer, this.wasm.getPosXPtr(), numEntities);
+    const posYwh = new Float64Array(memoryBuffer, this.wasm.getPosYwhPtr(), numEntities * 3);
+    const colorId = new Uint8Array(memoryBuffer, this.wasm.getColorIdPtr(), numEntities);
+    const vx = new Float64Array(memoryBuffer, this.wasm.getVxPtr(), numEntities);
+    const vy = new Float64Array(memoryBuffer, this.wasm.getVyPtr(), numEntities);
+    const angle = new Float64Array(memoryBuffer, this.wasm.getAnglePtr(), numEntities);
+    const indices = new Int32Array(memoryBuffer, this.wasm.getIndicesPtr(), numEntities);
+    const id = new Int32Array(memoryBuffer, this.wasm.getIdPtr(), numEntities);
 
     this.ecsData = { posX, posYwh, colorId, angle, vx, vy, indices, id };
-    this.colliding = new Uint8Array(memoryBuffer, wasm.getCollidingPtr(), numEntities);
-    this.pairsBuffer = new Int32Array(memoryBuffer, wasm.getPairsBufferPtr(), maxCollisions * 2);
+    this.colliding = new Uint8Array(memoryBuffer, this.wasm.getCollidingPtr(), numEntities);
+    this.pairsBuffer = new Int32Array(memoryBuffer, this.wasm.getPairsBufferPtr(), maxCollisions * 2);
 
     this.lastCollisionCount = 0;
   }
@@ -63,12 +77,17 @@ export class WasmECSSimulator implements Simulator {
     if (behavior === 'wander') behaviorId = 1;
     else if (behavior === 'erratic') behaviorId = 2;
 
-    const collisionCount = wasm.update(
+    let sortTypeId = 0; // insertion
+    if (this.sortType === 'quick') sortTypeId = 1;
+    else if (this.sortType === 'merge') sortTypeId = 2;
+
+    const collisionCount = this.wasm.update(
       width,
       height,
       speedMultiplier,
       behaviorId,
-      prng.seed
+      prng.seed,
+      sortTypeId
     );
 
     const end = performance.now();

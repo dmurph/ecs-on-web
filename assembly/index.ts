@@ -27,6 +27,7 @@ let indices!: StaticArray<i32>;
 let id!: StaticArray<i32>;
 let colliding!: StaticArray<u8>;
 let pairsBuffer!: StaticArray<i32>;
+let tempIndices!: StaticArray<i32>;
 
 let prng: LCG = new LCG(1);
 
@@ -41,6 +42,7 @@ export function init(numEntities: i32, maxCollisions: i32): void {
   id = new StaticArray<i32>(numEntities);
   colliding = new StaticArray<u8>(numEntities);
   pairsBuffer = new StaticArray<i32>(maxCollisions * 2);
+  tempIndices = new StaticArray<i32>(numEntities);
 
   // Initialize indices and id arrays
   for (let i = 0; i < numEntities; i++) {
@@ -134,23 +136,97 @@ export function updateMovement(
   }
 }
 
+// Quick Sort
+function quickSort(left: i32, right: i32): void {
+  if (left >= right) return;
+  const pivotIdx = partition(left, right);
+  quickSort(left, pivotIdx - 1);
+  quickSort(pivotIdx + 1, right);
+}
+
+function partition(left: i32, right: i32): i32 {
+  const mid = (left + right) >> 1;
+  const tempMid = unchecked(indices[mid]);
+  unchecked(indices[mid] = indices[right]);
+  unchecked(indices[right] = tempMid);
+
+  const pivotVal = unchecked(posX[indices[right]]);
+  let i = left - 1;
+  for (let j = left; j < right; j++) {
+    if (unchecked(posX[indices[j]]) < pivotVal) {
+      i++;
+      const temp = unchecked(indices[i]);
+      unchecked(indices[i] = indices[j]);
+      unchecked(indices[j] = temp);
+    }
+  }
+  const temp = unchecked(indices[i + 1]);
+  unchecked(indices[i + 1] = indices[right]);
+  unchecked(indices[right] = temp);
+  return i + 1;
+}
+
+// Merge Sort
+function mergeSort(left: i32, right: i32): void {
+  if (left >= right) return;
+  const mid = (left + right) >> 1;
+  mergeSort(left, mid);
+  mergeSort(mid + 1, right);
+  merge(left, mid, right);
+}
+
+function merge(left: i32, mid: i32, right: i32): void {
+  let i = left;
+  let j = mid + 1;
+  let k = left;
+
+  while (i <= mid && j <= right) {
+    const idxI = unchecked(indices[i]);
+    const idxJ = unchecked(indices[j]);
+    if (unchecked(posX[idxI]) <= unchecked(posX[idxJ])) {
+      unchecked(tempIndices[k++] = idxI);
+      i++;
+    } else {
+      unchecked(tempIndices[k++] = idxJ);
+      j++;
+    }
+  }
+
+  while (i <= mid) {
+    unchecked(tempIndices[k++] = unchecked(indices[i++]));
+  }
+  while (j <= right) {
+    unchecked(tempIndices[k++] = unchecked(indices[j++]));
+  }
+
+  for (let m = left; m <= right; m++) {
+    unchecked(indices[m] = unchecked(tempIndices[m]));
+  }
+}
+
 // Step 2a: Sweep & Prune Sort
-export function runBroadphaseSort(): void {
+export function runBroadphaseSort(sortType: i32): void {
   const localIndices = indices;
   const localPosX = posX;
   const len = localPosX.length;
-  // Insertion Sort
-  for (let i = 1; i < len; i++) {
-    const currIdx = unchecked(localIndices[i]);
-    const currX = unchecked(localPosX[currIdx]);
-    let j = i - 1;
-    while (j >= 0) {
-      const prevIdx = unchecked(localIndices[j]);
-      if (unchecked(localPosX[prevIdx]) <= currX) break;
-      unchecked(localIndices[j + 1] = prevIdx);
-      j--;
+  
+  if (sortType == 0) { // insertion
+    for (let i = 1; i < len; i++) {
+      const currIdx = unchecked(localIndices[i]);
+      const currX = unchecked(localPosX[currIdx]);
+      let j = i - 1;
+      while (j >= 0) {
+        const prevIdx = unchecked(localIndices[j]);
+        if (unchecked(localPosX[prevIdx]) <= currX) break;
+        unchecked(localIndices[j + 1] = prevIdx);
+        j--;
+      }
+      unchecked(localIndices[j + 1] = currIdx);
     }
-    unchecked(localIndices[j + 1] = currIdx);
+  } else if (sortType == 1) { // quick
+    quickSort(0, len - 1);
+  } else if (sortType == 2) { // merge
+    mergeSort(0, len - 1);
   }
 }
 
@@ -196,8 +272,8 @@ export function runBroadphaseSweep(): i32 {
 }
 
 // Step 2: Sweep & Prune Broadphase
-export function runBroadphase(): i32 {
-  runBroadphaseSort();
+export function runBroadphase(sortType: i32): i32 {
+  runBroadphaseSort(sortType);
   return runBroadphaseSweep();
 }
 
@@ -290,9 +366,10 @@ export function update(
   height: f64,
   speedMultiplier: f64,
   behavior: i32,
-  seed: u32
+  seed: u32,
+  sortType: i32
 ): i32 {
   updateMovement(width, height, speedMultiplier, behavior, seed);
-  const pairCount = runBroadphase();
+  const pairCount = runBroadphase(sortType);
   return resolvePhysics(pairCount);
 }

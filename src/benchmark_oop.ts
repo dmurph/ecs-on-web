@@ -2,6 +2,11 @@ import { ENTITY_COLORS, ENTITY_MAX_SPEED } from './config';
 import { SeededPRNG } from './prng';
 import type { Simulator, EntityState } from './simulator';
 import { renderCanvas } from './renderer';
+import {
+  insertionSortOOP,
+  quickSortOOP,
+  mergeSortOOP
+} from './sorting';
 
 export class GameEntity {
   id: number;
@@ -39,7 +44,11 @@ export class GameEntity {
   }
 }
 
-export function runBroadphase(entities: GameEntity[]): number {
+export function runBroadphase(
+  entities: GameEntity[],
+  sortType: 'insertion' | 'quick' | 'merge' | 'native' = 'insertion',
+  tempEntities?: GameEntity[]
+): number {
   let pairCount = 0;
   const len = entities.length;
 
@@ -47,15 +56,15 @@ export function runBroadphase(entities: GameEntity[]): number {
     entities[i].contacts = [];
   }
 
-  // Insertion Sort: O(n) for nearly-sorted data, optimal for coherent frame-to-frame movement
-  for (let i = 1; i < len; i++) {
-    const current = entities[i];
-    let j = i - 1;
-    while (j >= 0 && entities[j].x > current.x) {
-      entities[j + 1] = entities[j];
-      j--;
-    }
-    entities[j + 1] = current;
+  // 1. Sort entities based on chosen algorithm
+  if (sortType === 'insertion') {
+    insertionSortOOP(entities);
+  } else if (sortType === 'quick') {
+    quickSortOOP(entities, 0, len - 1);
+  } else if (sortType === 'merge' && tempEntities) {
+    mergeSortOOP(entities, tempEntities, 0, len - 1);
+  } else if (sortType === 'native') {
+    entities.sort((a, b) => a.x - b.x);
   }
 
   // Sweep
@@ -215,17 +224,28 @@ export function updateMovement(
  * Algorithm: Sweep-and-Prune (S&P) using 1D Insertion Sort along the X-axis.
  */
 export class OOPSimulator implements Simulator {
-  id = 'oop';
-  name = 'OOP S&P';
-  color = '#7c3aed';
+  id: string;
+  name: string;
+  private sortType: 'insertion' | 'quick' | 'merge' | 'native';
 
   private entities: GameEntity[] = [];
   private entitiesById: GameEntity[] = [];
+  private tempEntities: GameEntity[] = [];
   private times: number[] = [];
   private colliding = new Uint8Array(0);
   private pairsBuffer = new Int32Array(0);
   private maxCollisions = 200000;
   private lastCollisionCount = 0;
+
+  constructor(
+    sortType: 'insertion' | 'quick' | 'merge' | 'native' = 'insertion',
+    id = 'oop',
+    name = 'OOP S&P'
+  ) {
+    this.sortType = sortType;
+    this.id = id;
+    this.name = name;
+  }
 
   /**
    * Initializes the simulation. Shuffles the main entities list to simulate
@@ -241,6 +261,7 @@ export class OOPSimulator implements Simulator {
     }
     // Shuffle primary array to break sequential cache hits on memory traversals
     this.entities.sort(() => prng.next() - 0.5);
+    this.tempEntities = new Array(numEntities);
     
     this.colliding = new Uint8Array(numEntities);
     this.pairsBuffer = new Int32Array(this.maxCollisions * 2);
@@ -259,7 +280,7 @@ export class OOPSimulator implements Simulator {
   update(width: number, height: number, speedMultiplier: number, behavior: string, prng: SeededPRNG): { time: number, collisionCount: number } {
     const start = performance.now();
     updateMovement(this.entitiesById, width, height, speedMultiplier, behavior, prng);
-    runBroadphase(this.entities);
+    runBroadphase(this.entities, this.sortType, this.tempEntities);
     
     this.colliding.fill(0);
     this.lastCollisionCount = resolveCollisions(this.entities, this.colliding, this.pairsBuffer);

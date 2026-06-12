@@ -13,14 +13,7 @@ export interface UICallbacks {
   onBaselineChange?: (id: string) => void;
 }
 
-export const ALL_SIMULATORS = [
-  { id: 'oop', name: 'OOP S&P' },
-  { id: 'oop-tree', name: 'OOP Tree' },
-  { id: 'ecs', name: 'ECS Custom S&P' },
-  { id: 'ecs-tree', name: 'ECS Custom Tree' },
-  { id: 'bitecs', name: 'bitECS S&P' },
-  { id: 'wasm', name: 'WASM ECS S&P' }
-];
+import { SIMULATOR_REGISTRY } from './registry';
 
 // DOM Elements
 let statusPulse: HTMLElement;
@@ -38,31 +31,6 @@ let btnRun: HTMLButtonElement;
 let btnPause: HTMLButtonElement;
 let btnReset: HTMLButtonElement;
 
-// Metrics
-let oopCurrentTimeEl: HTMLElement;
-let oopAvgTimeEl: HTMLElement;
-let oopP99TimeEl: HTMLElement;
-
-let oopTreeCurrentTimeEl: HTMLElement;
-let oopTreeAvgTimeEl: HTMLElement;
-let oopTreeP99TimeEl: HTMLElement;
-
-let ecsCurrentTimeEl: HTMLElement;
-let ecsAvgTimeEl: HTMLElement;
-let ecsP99TimeEl: HTMLElement;
-
-let ecsTreeCurrentTimeEl: HTMLElement;
-let ecsTreeAvgTimeEl: HTMLElement;
-let ecsTreeP99TimeEl: HTMLElement;
-
-let bitecsCurrentTimeEl: HTMLElement;
-let bitecsAvgTimeEl: HTMLElement;
-let bitecsP99TimeEl: HTMLElement;
-
-let wasmCurrentTimeEl: HTMLElement;
-let wasmAvgTimeEl: HTMLElement;
-let wasmP99TimeEl: HTMLElement;
-
 let btnCopyResults: HTMLButtonElement;
 let compareBaselineSelect: HTMLSelectElement;
 let speedupValuesContainer: HTMLElement;
@@ -70,38 +38,232 @@ let speedupValuesContainer: HTMLElement;
 let chartFrameIndexEl: HTMLElement;
 let chartFrameTotalEl: HTMLElement;
 
-let oopFpsEl: HTMLElement;
-let oopTreeFpsEl: HTMLElement;
-let ecsFpsEl: HTMLElement;
-let ecsTreeFpsEl: HTMLElement;
-let bitecsFpsEl: HTMLElement;
-let wasmFpsEl: HTMLElement;
+// Maps for simulator-specific elements
+const currentTimeEls: Record<string, HTMLElement> = {};
+const avgTimeEls: Record<string, HTMLElement> = {};
+const p99TimeEls: Record<string, HTMLElement> = {};
+const fpsEls: Record<string, HTMLElement> = {};
+export const canvases: Record<string, HTMLCanvasElement> = {};
+const toggles: Record<string, HTMLInputElement> = {};
 
-// Toggles
-let toggleOOP: HTMLInputElement;
-let toggleOOPTree: HTMLInputElement;
-let toggleECS: HTMLInputElement;
-let toggleECSTree: HTMLInputElement;
-let toggleBitecs: HTMLInputElement;
-let toggleWasm: HTMLInputElement;
 let toggleLogScale: HTMLInputElement;
 let toggleZeroBaseline: HTMLInputElement;
 
-// Canvases
-let canvasOOP: HTMLCanvasElement;
-let canvasOOPTree: HTMLCanvasElement;
-let canvasECS: HTMLCanvasElement;
-let canvasECSTree: HTMLCanvasElement;
-let canvasBitecs: HTMLCanvasElement;
-let canvasWasm: HTMLCanvasElement;
+interface ContainerDefinition {
+  subgroups: {
+    title: string;
+    simulatorIds: string[];
+  }[];
+}
+
+interface GroupDefinition {
+  title: string;
+  containers: ContainerDefinition[];
+}
+
+const UI_GROUPS: GroupDefinition[] = [
+  {
+    title: 'JavaScript Simulators',
+    containers: [
+      {
+        subgroups: [
+          {
+            title: 'S&P (OOP):',
+            simulatorIds: ['oop', 'oop-quick', 'oop-merge', 'oop-native']
+          },
+          {
+            title: 'S&P (ECS):',
+            simulatorIds: ['ecs', 'ecs-quick', 'ecs-merge', 'ecs-native']
+          }
+        ]
+      },
+      {
+        subgroups: [
+          {
+            title: 'Spatial Tree:',
+            simulatorIds: ['oop-tree', 'ecs-tree']
+          }
+        ]
+      }
+    ]
+  },
+  {
+    title: 'WebAssembly Simulators',
+    containers: [
+      {
+        subgroups: [
+          {
+            title: 'S&P (WASM):',
+            simulatorIds: ['wasm', 'wasm-quick', 'wasm-merge']
+          }
+        ]
+      }
+    ]
+  }
+];
+
+function generateToggles() {
+  const container = document.querySelector('.toggle-group')!;
+  if (!container) return;
+  container.innerHTML = '';
+
+  UI_GROUPS.forEach(group => {
+    const groupEl = document.createElement('div');
+    groupEl.className = 'toggle-section';
+
+    const header = document.createElement('div');
+    header.className = 'toggle-section-header';
+    header.textContent = group.title;
+    groupEl.appendChild(header);
+
+    const containersList = document.createElement('div');
+    containersList.className = 'toggle-containers-list';
+
+    group.containers.forEach(containerDef => {
+      const containerEl = document.createElement('div');
+      containerEl.className = 'toggle-container';
+
+      containerDef.subgroups.forEach(sub => {
+        const subgroupEl = document.createElement('div');
+        subgroupEl.className = 'toggle-subgroup';
+
+        const subTitle = document.createElement('span');
+        subTitle.className = 'subgroup-title';
+        subTitle.textContent = sub.title;
+        subgroupEl.appendChild(subTitle);
+
+        const togglesContainer = document.createElement('div');
+        togglesContainer.className = 'subgroup-toggles';
+
+        sub.simulatorIds.forEach(simId => {
+          const sim = SIMULATOR_REGISTRY.find(s => s.id === simId);
+          if (sim) {
+            const label = document.createElement('label');
+            label.className = 'toggle-label';
+            
+            let displayName = sim.name;
+            if (sim.id.startsWith('oop-') && sim.id !== 'oop-tree') {
+              displayName = sim.name.replace('OOP S&P (', '').replace(')', '');
+            } else if (sim.id === 'oop') {
+              displayName = 'Insertion';
+            } else if (sim.id.startsWith('ecs-') && sim.id !== 'ecs-tree') {
+              displayName = sim.name.replace('ECS S&P (', '').replace(')', '');
+            } else if (sim.id === 'ecs') {
+              displayName = 'Insertion';
+            } else if (sim.id.startsWith('wasm-')) {
+              displayName = sim.name.replace('WASM ECS S&P (', '').replace(')', '');
+            } else if (sim.id === 'wasm') {
+              displayName = 'Insertion';
+            }
+
+            label.innerHTML = `<input type="checkbox" id="toggle-${sim.id}" ${sim.activeByDefault ? 'checked' : ''} /><span class="toggle-color-square" style="background-color: ${sim.color}"></span>${displayName}`;
+            togglesContainer.appendChild(label);
+          }
+        });
+
+        subgroupEl.appendChild(togglesContainer);
+        containerEl.appendChild(subgroupEl);
+      });
+
+      containersList.appendChild(containerEl);
+    });
+
+    groupEl.appendChild(containersList);
+    container.appendChild(groupEl);
+  });
+}
+
+function generateMetricCards() {
+  const container = document.querySelector('.metrics-grid')!;
+  if (!container) return;
+  
+  // Remove all cards that are not the speedup-card
+  const cards = container.querySelectorAll('.metric-card');
+  cards.forEach(card => {
+    if (!card.classList.contains('speedup-card')) {
+      card.remove();
+    }
+  });
+
+  const speedupCard = container.querySelector('.speedup-card')!;
+  SIMULATOR_REGISTRY.forEach(sim => {
+    const card = document.createElement('div');
+    card.className = `metric-card ${sim.id}-card`;
+    card.id = `card-metric-${sim.id}`;
+    if (!sim.activeByDefault) {
+      card.classList.add('hidden');
+    }
+    card.innerHTML = `
+      <div class="card-header-simple">
+        <h3>${sim.name}</h3>
+        <span class="legend-dot" style="background-color: ${sim.color}"></span>
+      </div>
+      <div class="metric-values">
+        <div class="metric-item">
+          <span class="metric-label">Current</span>
+          <span class="metric-value font-mono" id="${sim.id}-current-time" style="color: ${sim.color}">0.00 ms</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-label">Average</span>
+          <span class="metric-value font-mono" id="${sim.id}-avg-time" style="color: ${sim.color}">0.00 ms</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-label">99th %</span>
+          <span class="metric-value font-mono" id="${sim.id}-p99-time" style="color: ${sim.color}">0.00 ms</span>
+        </div>
+      </div>
+    `;
+    container.insertBefore(card, speedupCard);
+  });
+}
+
+function generateLegend() {
+  const container = document.querySelector('.chart-legend')!;
+  if (!container) return;
+  container.innerHTML = '';
+  SIMULATOR_REGISTRY.forEach(sim => {
+    const item = document.createElement('span');
+    item.className = 'legend-item';
+    item.id = `legend-item-${sim.id}`;
+    if (!sim.activeByDefault) {
+      item.classList.add('hidden');
+    }
+    item.innerHTML = `<span class="legend-color" style="background-color: ${sim.color}"></span>${sim.name}`;
+    container.appendChild(item);
+  });
+}
+
+function generateCanvases() {
+  const container = document.querySelector('.visualizer-grid')!;
+  if (!container) return;
+  container.innerHTML = '';
+  SIMULATOR_REGISTRY.forEach(sim => {
+    const card = document.createElement('div');
+    card.className = 'canvas-card';
+    card.id = `card-canvas-${sim.id}`;
+    if (!sim.activeByDefault) {
+      card.classList.add('hidden');
+    }
+    card.innerHTML = `
+      <div class="canvas-header">
+        <h3>${sim.name}</h3>
+        <span class="render-fps" id="${sim.id}-fps">0 FPS</span>
+      </div>
+      <div class="canvas-container">
+        <canvas id="canvas-${sim.id}" width="1000" height="800"></canvas>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
 
 export function initUI() {
-  toggleOOP = document.getElementById('toggle-oop') as HTMLInputElement;
-  toggleOOPTree = document.getElementById('toggle-oop-tree') as HTMLInputElement;
-  toggleECS = document.getElementById('toggle-ecs') as HTMLInputElement;
-  toggleECSTree = document.getElementById('toggle-ecs-tree') as HTMLInputElement;
-  toggleBitecs = document.getElementById('toggle-bitecs') as HTMLInputElement;
-  toggleWasm = document.getElementById('toggle-wasm') as HTMLInputElement;
+  // Generate dynamic DOM structures
+  generateToggles();
+  generateMetricCards();
+  generateLegend();
+  generateCanvases();
+
   toggleLogScale = document.getElementById('toggle-log-scale') as HTMLInputElement;
   toggleZeroBaseline = document.getElementById('toggle-zero-baseline') as HTMLInputElement;
 
@@ -120,56 +282,24 @@ export function initUI() {
   btnPause = document.getElementById('btn-toggle-pause') as HTMLButtonElement;
   btnReset = document.getElementById('btn-reset') as HTMLButtonElement;
 
-  oopCurrentTimeEl = document.getElementById('oop-current-time')!;
-  oopAvgTimeEl = document.getElementById('oop-avg-time')!;
-  oopP99TimeEl = document.getElementById('oop-p99-time')!;
-
-  oopTreeCurrentTimeEl = document.getElementById('oop-tree-current-time')!;
-  oopTreeAvgTimeEl = document.getElementById('oop-tree-avg-time')!;
-  oopTreeP99TimeEl = document.getElementById('oop-tree-p99-time')!;
-
-  ecsCurrentTimeEl = document.getElementById('ecs-current-time')!;
-  ecsAvgTimeEl = document.getElementById('ecs-avg-time')!;
-  ecsP99TimeEl = document.getElementById('ecs-p99-time')!;
-
-  ecsTreeCurrentTimeEl = document.getElementById('ecs-tree-current-time')!;
-  ecsTreeAvgTimeEl = document.getElementById('ecs-tree-avg-time')!;
-  ecsTreeP99TimeEl = document.getElementById('ecs-tree-p99-time')!;
-
-  bitecsCurrentTimeEl = document.getElementById('bitecs-current-time')!;
-  bitecsAvgTimeEl = document.getElementById('bitecs-avg-time')!;
-  bitecsP99TimeEl = document.getElementById('bitecs-p99-time')!;
-
-  wasmCurrentTimeEl = document.getElementById('wasm-current-time')!;
-  wasmAvgTimeEl = document.getElementById('wasm-avg-time')!;
-  wasmP99TimeEl = document.getElementById('wasm-p99-time')!;
-
   btnCopyResults = document.getElementById('btn-copy-results') as HTMLButtonElement;
   compareBaselineSelect = document.getElementById('compare-baseline-select') as HTMLSelectElement;
   speedupValuesContainer = document.getElementById('speedup-values-container')!;
 
-
   chartFrameIndexEl = document.getElementById('chart-frame-index')!;
   chartFrameTotalEl = document.getElementById('chart-frame-total')!;
 
-  oopFpsEl = document.getElementById('oop-fps')!;
-  oopTreeFpsEl = document.getElementById('oop-tree-fps')!;
-  ecsFpsEl = document.getElementById('ecs-fps')!;
-  ecsTreeFpsEl = document.getElementById('ecs-tree-fps')!;
-  bitecsFpsEl = document.getElementById('bitecs-fps')!;
-  wasmFpsEl = document.getElementById('wasm-fps')!;
+  // Fill simulator maps
+  SIMULATOR_REGISTRY.forEach(sim => {
+    toggles[sim.id] = document.getElementById(`toggle-${sim.id}`) as HTMLInputElement;
+    currentTimeEls[sim.id] = document.getElementById(`${sim.id}-current-time`)!;
+    avgTimeEls[sim.id] = document.getElementById(`${sim.id}-avg-time`)!;
+    p99TimeEls[sim.id] = document.getElementById(`${sim.id}-p99-time`)!;
+    fpsEls[sim.id] = document.getElementById(`${sim.id}-fps`)!;
+    canvases[sim.id] = document.getElementById(`canvas-${sim.id}`) as HTMLCanvasElement;
+  });
 
-  canvasOOP = document.getElementById('canvas-oop') as HTMLCanvasElement;
-  canvasOOPTree = document.getElementById('canvas-oop-tree') as HTMLCanvasElement;
-  canvasECS = document.getElementById('canvas-ecs') as HTMLCanvasElement;
-  canvasECSTree = document.getElementById('canvas-ecs-tree') as HTMLCanvasElement;
-  canvasBitecs = document.getElementById('canvas-bitecs') as HTMLCanvasElement;
-  canvasWasm = document.getElementById('canvas-wasm') as HTMLCanvasElement;
   resizeCanvases();
-}
-
-export function getCanvases() {
-  return { canvasOOP, canvasOOPTree, canvasECS, canvasECSTree, canvasBitecs, canvasWasm };
 }
 
 export function setupUIListeners(callbacks: UICallbacks) {
@@ -215,12 +345,12 @@ export function setupUIListeners(callbacks: UICallbacks) {
     });
   };
 
-  handleToggle('oop', toggleOOP);
-  handleToggle('oop-tree', toggleOOPTree);
-  handleToggle('ecs', toggleECS);
-  handleToggle('ecs-tree', toggleECSTree);
-  handleToggle('bitecs', toggleBitecs);
-  handleToggle('wasm', toggleWasm);
+  SIMULATOR_REGISTRY.forEach(sim => {
+    const cb = toggles[sim.id];
+    if (cb) {
+      handleToggle(sim.id, cb);
+    }
+  });
 
   toggleLogScale.addEventListener('change', () => {
     callbacks.onToggleLogScale?.(toggleLogScale.checked);
@@ -253,13 +383,13 @@ export function updateStatus(status: string, pulseClass: string) {
   statusPulse.className = `pulse-indicator ${pulseClass}`;
 }
 
-export function updateFps(oop: number, oopTree: number, ecs: number, ecsTree: number, bitecs: number, wasm: number) {
-  oopFpsEl.textContent = `${oop} FPS`;
-  oopTreeFpsEl.textContent = `${oopTree} FPS`;
-  ecsFpsEl.textContent = `${ecs} FPS`;
-  ecsTreeFpsEl.textContent = `${ecsTree} FPS`;
-  bitecsFpsEl.textContent = `${bitecs} FPS`;
-  wasmFpsEl.textContent = `${wasm} FPS`;
+export function updateFps(fpsMap: Record<string, number>) {
+  Object.entries(fpsMap).forEach(([id, fps]) => {
+    const el = fpsEls[id];
+    if (el) {
+      el.textContent = `${fps} FPS`;
+    }
+  });
 }
 
 export function setPauseButtonText(text: string) {
@@ -276,42 +406,16 @@ export function resetUIElements(
   activeSims: string[],
   baselineId: string
 ) {
-  oopCurrentTimeEl.textContent = '0.00 ms';
-  oopAvgTimeEl.textContent = '0.00 ms';
-  oopP99TimeEl.textContent = '0.00 ms';
-
-  oopTreeCurrentTimeEl.textContent = '0.00 ms';
-  oopTreeAvgTimeEl.textContent = '0.00 ms';
-  oopTreeP99TimeEl.textContent = '0.00 ms';
-
-  ecsCurrentTimeEl.textContent = '0.00 ms';
-  ecsAvgTimeEl.textContent = '0.00 ms';
-  ecsP99TimeEl.textContent = '0.00 ms';
-
-  ecsTreeCurrentTimeEl.textContent = '0.00 ms';
-  ecsTreeAvgTimeEl.textContent = '0.00 ms';
-  ecsTreeP99TimeEl.textContent = '0.00 ms';
-
-  bitecsCurrentTimeEl.textContent = '0.00 ms';
-  bitecsAvgTimeEl.textContent = '0.00 ms';
-  bitecsP99TimeEl.textContent = '0.00 ms';
-
-  wasmCurrentTimeEl.textContent = '0.00 ms';
-  wasmAvgTimeEl.textContent = '0.00 ms';
-  wasmP99TimeEl.textContent = '0.00 ms';
+  SIMULATOR_REGISTRY.forEach(sim => {
+    if (currentTimeEls[sim.id]) currentTimeEls[sim.id].textContent = '0.00 ms';
+    if (avgTimeEls[sim.id]) avgTimeEls[sim.id].textContent = '0.00 ms';
+    if (p99TimeEls[sim.id]) p99TimeEls[sim.id].textContent = '0.00 ms';
+    if (fpsEls[sim.id]) fpsEls[sim.id].textContent = '0 FPS';
+  });
 
   renderInitialSpeedups(activeSims, baselineId);
   chartFrameIndexEl.textContent = '0';
   
-
-
-  oopFpsEl.textContent = '0 FPS';
-  oopTreeFpsEl.textContent = '0 FPS';
-  ecsFpsEl.textContent = '0 FPS';
-  ecsTreeFpsEl.textContent = '0 FPS';
-  bitecsFpsEl.textContent = '0 FPS';
-  wasmFpsEl.textContent = '0 FPS';
-
   statusPulse.className = 'pulse-indicator';
   statusText.textContent = 'Ready';
 
@@ -330,53 +434,33 @@ export function resetUIElements(
 
 export function updateMetricsDisplay(data: {
   currentFrame: number;
-  oopTime: number;
-  oopTreeTime: number;
-  ecsTime: number;
-  ecsTreeTime: number;
-  bitecsTime: number;
-  wasmTime: number;
-  oopCount: number;
-  oopTreeCount: number;
-  ecsCount: number;
-  ecsTreeCount: number;
-  bitecsCount: number;
-  wasmCount: number;
-  oopTimes: number[];
-  oopTreeTimes: number[];
-  ecsTimes: number[];
-  ecsTreeTimes: number[];
-  bitecsTimes: number[];
-  wasmTimes: number[];
+  times: Record<string, number>;
+  history: Record<string, number[]>;
   activeSimulators: string[];
   baselineSimulatorId: string;
 }) {
   chartFrameIndexEl.textContent = data.currentFrame.toString();
 
-  oopCurrentTimeEl.textContent = `${data.oopTime.toFixed(3)} ms`;
-  oopTreeCurrentTimeEl.textContent = `${data.oopTreeTime.toFixed(3)} ms`;
-  ecsCurrentTimeEl.textContent = `${data.ecsTime.toFixed(3)} ms`;
-  ecsTreeCurrentTimeEl.textContent = `${data.ecsTreeTime.toFixed(3)} ms`;
-  bitecsCurrentTimeEl.textContent = `${data.bitecsTime.toFixed(3)} ms`;
-  wasmCurrentTimeEl.textContent = `${data.wasmTime.toFixed(3)} ms`;
+  SIMULATOR_REGISTRY.forEach(sim => {
+    const time = data.times[sim.id] ?? 0;
+    const currentEl = currentTimeEls[sim.id];
+    if (currentEl) {
+      currentEl.textContent = `${time.toFixed(3)} ms`;
+    }
+  });
 
   // Calculate Averages
   const avg = (arr: number[]) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
-  const averages: Record<string, number> = {
-    oop: avg(data.oopTimes),
-    'oop-tree': avg(data.oopTreeTimes),
-    ecs: avg(data.ecsTimes),
-    'ecs-tree': avg(data.ecsTreeTimes),
-    bitecs: avg(data.bitecsTimes),
-    wasm: avg(data.wasmTimes)
-  };
-
-  oopAvgTimeEl.textContent = `${averages.oop.toFixed(3)} ms`;
-  oopTreeAvgTimeEl.textContent = `${averages['oop-tree'].toFixed(3)} ms`;
-  ecsAvgTimeEl.textContent = `${averages.ecs.toFixed(3)} ms`;
-  ecsTreeAvgTimeEl.textContent = `${averages['ecs-tree'].toFixed(3)} ms`;
-  bitecsAvgTimeEl.textContent = `${averages.bitecs.toFixed(3)} ms`;
-  wasmAvgTimeEl.textContent = `${averages.wasm.toFixed(3)} ms`;
+  const averages: Record<string, number> = {};
+  SIMULATOR_REGISTRY.forEach(sim => {
+    const hist = data.history[sim.id] || [];
+    const val = avg(hist);
+    averages[sim.id] = val;
+    const avgEl = avgTimeEls[sim.id];
+    if (avgEl) {
+      avgEl.textContent = `${val.toFixed(3)} ms`;
+    }
+  });
 
   // Calculate 99th Percentiles
   const p99 = (arr: number[], current: number) => {
@@ -385,12 +469,14 @@ export function updateMetricsDisplay(data: {
     return sorted[Math.floor(sorted.length * 0.99)] || current;
   };
 
-  oopP99TimeEl.textContent = `${p99(data.oopTimes, data.oopTime).toFixed(3)} ms`;
-  oopTreeP99TimeEl.textContent = `${p99(data.oopTreeTimes, data.oopTreeTime).toFixed(3)} ms`;
-  ecsP99TimeEl.textContent = `${p99(data.ecsTimes, data.ecsTime).toFixed(3)} ms`;
-  ecsTreeP99TimeEl.textContent = `${p99(data.ecsTreeTimes, data.ecsTreeTime).toFixed(3)} ms`;
-  bitecsP99TimeEl.textContent = `${p99(data.bitecsTimes, data.bitecsTime).toFixed(3)} ms`;
-  wasmP99TimeEl.textContent = `${p99(data.wasmTimes, data.wasmTime).toFixed(3)} ms`;
+  SIMULATOR_REGISTRY.forEach(sim => {
+    const hist = data.history[sim.id] || [];
+    const val = p99(hist, data.times[sim.id] ?? 0);
+    const p99El = p99TimeEls[sim.id];
+    if (p99El) {
+      p99El.textContent = `${val.toFixed(3)} ms`;
+    }
+  });
 
   // Calculate Speedups dynamically relative to baseline
   const baselineAvg = data.activeSimulators.includes(data.baselineSimulatorId)
@@ -407,7 +493,7 @@ export function updateMetricsDisplay(data: {
     emptyRow.textContent = 'Add active simulators to compare';
     speedupValuesContainer.appendChild(emptyRow);
   } else {
-    for (const sim of ALL_SIMULATORS) {
+    for (const sim of SIMULATOR_REGISTRY) {
       if (sim.id !== data.baselineSimulatorId && data.activeSimulators.includes(sim.id)) {
         const row = document.createElement('div');
         row.className = 'speedup-row';
@@ -454,38 +540,28 @@ export function handleCopyFeedback(success: boolean) {
 }
 
 function resizeCanvases() {
-  const containerOOP = canvasOOP.parentElement;
-  const containerOOPTree = canvasOOPTree.parentElement;
-  const containerECS = canvasECS.parentElement;
-  const containerECSTree = canvasECSTree.parentElement;
-  const containerBitecs = canvasBitecs.parentElement;
-  const containerWasm = canvasWasm.parentElement;
-  if (containerOOP && containerOOPTree && containerECS && containerECSTree && containerBitecs && containerWasm) {
-    let w = 0;
-    let h = 0;
-    const containers = [containerOOP, containerOOPTree, containerECS, containerECSTree, containerBitecs, containerWasm];
-    for (const container of containers) {
-      if (container.clientWidth > 0) {
-        w = container.clientWidth;
-        h = container.clientHeight;
+  let w = 0;
+  let h = 0;
+  for (const sim of SIMULATOR_REGISTRY) {
+    const canvas = canvases[sim.id];
+    if (canvas) {
+      const parent = canvas.parentElement;
+      if (parent && parent.clientWidth > 0) {
+        w = parent.clientWidth;
+        h = parent.clientHeight;
         break;
       }
     }
+  }
 
-    if (w > 0 && h > 0) {
-      canvasOOP.width = w;
-      canvasOOP.height = h;
-      canvasOOPTree.width = w;
-      canvasOOPTree.height = h;
-      canvasECS.width = w;
-      canvasECS.height = h;
-      canvasECSTree.width = w;
-      canvasECSTree.height = h;
-      canvasBitecs.width = w;
-      canvasBitecs.height = h;
-      canvasWasm.width = w;
-      canvasWasm.height = h;
-    }
+  if (w > 0 && h > 0) {
+    SIMULATOR_REGISTRY.forEach(sim => {
+      const canvas = canvases[sim.id];
+      if (canvas) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+    });
   }
 }
 
@@ -514,7 +590,7 @@ export function toggleCardVisibility(id: string, visible: boolean) {
 
 export function updateBaselineOptions(activeSims: string[], selectedBaselineId: string) {
   compareBaselineSelect.innerHTML = '';
-  for (const sim of ALL_SIMULATORS) {
+  for (const sim of SIMULATOR_REGISTRY) {
     if (activeSims.includes(sim.id)) {
       const opt = document.createElement('option');
       opt.value = sim.id;
@@ -536,7 +612,7 @@ export function renderInitialSpeedups(activeSims: string[], baselineId: string) 
     emptyRow.textContent = 'Add active simulators to compare';
     speedupValuesContainer.appendChild(emptyRow);
   } else {
-    for (const sim of ALL_SIMULATORS) {
+    for (const sim of SIMULATOR_REGISTRY) {
       if (sim.id !== baselineId && activeSims.includes(sim.id)) {
         const row = document.createElement('div');
         row.className = 'speedup-row';

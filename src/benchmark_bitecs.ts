@@ -3,6 +3,11 @@ import { SeededPRNG } from './prng';
 import { ENTITY_COLORS, ENTITY_MAX_SPEED } from './config';
 import type { Simulator, EntityState } from './simulator';
 import { renderCanvas } from './renderer';
+import {
+  insertionSortBitecs,
+  quickSortBitecs,
+  mergeSortBitecs
+} from './sorting';
 
 // 1. Component Definitions
 export const PositionX = { value: new Float64Array(100000) };
@@ -48,23 +53,22 @@ export function createBitecsData(world: any, numEntities: number, canvasWidth: n
 
 // 3. S&P Broadphase
 export function runBroadphase(
-  entities: number[] | Int32Array,
-  outPairs: Int32Array
+  entities: Int32Array,
+  outPairs: Int32Array,
+  sortType: 'insertion' | 'quick' | 'merge' | 'native' = 'insertion',
+  tempEntities?: Int32Array
 ): number {
   let pairCount = 0;
   const len = entities.length;
   const maxPairs = outPairs.length / 2;
 
-  // 1. Insertion Sort: runs in near-linear O(n) time when data exhibits high spatial coherence
-  for (let i = 1; i < len; i++) {
-    const currId = entities[i];
-    const currX = PositionX.value[currId];
-    let j = i - 1;
-    while (j >= 0 && PositionX.value[entities[j]] > currX) {
-      entities[j + 1] = entities[j];
-      j--;
-    }
-    entities[j + 1] = currId;
+  // 1. Sort entities based on chosen algorithm
+  if (sortType === 'insertion') {
+    insertionSortBitecs(entities, PositionX.value);
+  } else if (sortType === 'quick') {
+    quickSortBitecs(entities, PositionX.value, 0, len - 1);
+  } else if (sortType === 'merge' && tempEntities) {
+    mergeSortBitecs(entities, PositionX.value, tempEntities, 0, len - 1);
   }
 
   // 2. Sweep
@@ -234,19 +238,30 @@ export function updateMovement(
  * querying coordinates directly via component typed arrays.
  */
 export class BitECSSimulator implements Simulator {
-  id = 'bitecs';
-  name = 'bitECS S&P';
-  color = '#0284c7';
+  id: string;
+  name: string;
+  private sortType: 'insertion' | 'quick' | 'merge' | 'native';
 
   private world: any = null;
   private entities: number[] = [];
   private sortedEntities: Int32Array = new Int32Array(0);
+  private tempEntities: Int32Array = new Int32Array(0);
   private times: number[] = [];
   private colliding = new Uint8Array(0);
   private pairsBuffer = new Int32Array(0);
   private maxCollisions = 200000;
   private lastCollisionCount = 0;
   private pairsCount = 0;
+
+  constructor(
+    sortType: 'insertion' | 'quick' | 'merge' | 'native' = 'insertion',
+    id = 'bitecs',
+    name = 'bitECS S&P'
+  ) {
+    this.sortType = sortType;
+    this.id = id;
+    this.name = name;
+  }
 
   /**
    * Initializes the bitECS world, registers components, and spawns entity IDs.
@@ -262,6 +277,7 @@ export class BitECSSimulator implements Simulator {
     });
     this.entities = createBitecsData(this.world, numEntities, width, height);
     this.sortedEntities = new Int32Array(this.entities);
+    this.tempEntities = new Int32Array(numEntities);
     
     this.colliding = new Uint8Array(numEntities);
     this.pairsBuffer = new Int32Array(this.maxCollisions * 2);
@@ -281,7 +297,7 @@ export class BitECSSimulator implements Simulator {
   update(width: number, height: number, speedMultiplier: number, behavior: string, prng: SeededPRNG): { time: number, collisionCount: number } {
     const start = performance.now();
     updateMovement(this.entities, width, height, speedMultiplier, behavior, prng);
-    this.pairsCount = runBroadphase(this.sortedEntities, this.pairsBuffer);
+    this.pairsCount = runBroadphase(this.sortedEntities, this.pairsBuffer, this.sortType, this.tempEntities);
     
     this.colliding.fill(0);
     this.lastCollisionCount = resolveCollisions(this.entities, this.pairsBuffer, this.pairsCount, this.colliding);

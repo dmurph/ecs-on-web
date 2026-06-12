@@ -40,29 +40,7 @@
       <section class="section-simulators-toggle">
         <span class="toggle-title">Active Simulators:</span>
         <div class="toggle-group">
-          <label class="toggle-label"
-            ><input type="checkbox" id="toggle-oop" checked /> OOP S&P</label
-          >
-          <label class="toggle-label"
-            ><input type="checkbox" id="toggle-oop-tree" checked /> OOP
-            Tree</label
-          >
-          <label class="toggle-label"
-            ><input type="checkbox" id="toggle-ecs" checked /> ECS Custom
-            S&P</label
-          >
-          <label class="toggle-label"
-            ><input type="checkbox" id="toggle-ecs-tree" checked /> ECS Custom
-            Tree</label
-          >
-          <label class="toggle-label"
-            ><input type="checkbox" id="toggle-bitecs" checked /> bitECS
-            S&P</label
-          >
-          <label class="toggle-label"
-            ><input type="checkbox" id="toggle-wasm" checked /> WASM ECS
-            S&P</label
-          >
+          <!-- Dynamic toggles will be injected here -->
         </div>
       </section>
 
@@ -145,173 +123,6 @@
       <section class="section-displays">
         <h2>Performance Displays</h2>
         <div class="metrics-grid">
-          <!-- 1. OOP S&P -->
-          <div class="metric-card oop-card" id="card-metric-oop">
-            <div class="card-header-simple">
-              <h3>OOP S&P</h3>
-              <span class="legend-dot legend-oop"></span>
-            </div>
-            <div class="metric-values">
-              <div class="metric-item">
-                <span class="metric-label">Current</span>
-                <span class="metric-value font-mono" id="oop-current-time"
-                  >0.00 ms</span
-                >
-              </div>
-              <div class="metric-item">
-                <span class="metric-label">Average</span>
-                <span class="metric-value font-mono" id="oop-avg-time"
-                  >0.00 ms</span
-                >
-              </div>
-              <div class="metric-item">
-                <span class="metric-label">99th %</span>
-                <span class="metric-value font-mono" id="oop-p99-time"
-                  >0.00 ms</span
-                >
-              </div>
-            </div>
-          </div>
-
-          <!-- 2. OOP Tree -->
-          <div class="metric-card oop-tree-card" id="card-metric-oop-tree">
-            <div class="card-header-simple">
-              <h3>OOP Tree</h3>
-              <span class="legend-dot legend-oop-tree"></span>
-            </div>
-            <div class="metric-values">
-              <div class="metric-item">
-                <span class="metric-label">Current</span>
-                <span class="metric-value font-mono" id="oop-tree-current-time"
-                  >0.00 ms</span
-                >
-              </div>
-              <div class="metric-item">
-                <span class="metric-label">Average</span>
-                <span class="metric-value font-mono" id="oop-tree-avg-time"
-                  >0.00 ms</span
-                >
-              </div>
-              <div class="metric-item">
-                <span class="metric-label">99th %</span>
-                <span class="metric-value font-mono" id="oop-tree-p99-time"
-                  >0.00 ms</span
-                >
-              </div>
-            </div>
-          </div>
-
-          <!-- 3. Custom ECS -->
-          <div class="metric-card ecs-card" id="card-metric-ecs">
-            <div class="card-header-simple">
-              <h3>ECS Custom S&P</h3>
-              <span class="legend-dot legend-ecs"></span>
-            </div>
-            <div class="metric-values">
-              <div class="metric-item">
-                <span class="metric-label">Current</span>
-                <span class="metric-value font-mono" id="ecs-current-time"
-                  >0.00 ms</span
-                >
-              </div>
-              <div class="metric-item">
-                <span class="metric-label">Average</span>
-                <span class="metric-value font-mono" id="ecs-avg-time"
-                  >0.00 ms</span
-                >
-              </div>
-              <div class="metric-item">
-                <span class="metric-label">99th %</span>
-                <span class="metric-value font-mono" id="ecs-p99-time"
-                  >0.00 ms</span
-                >
-              </div>
-            </div>
-          </div>
-
-          <!-- 4. ECS Tree -->
-          <div class="metric-card ecs-tree-card" id="card-metric-ecs-tree">
-            <div class="card-header-simple">
-              <h3>ECS Tree</h3>
-              <span class="legend-dot legend-ecs-tree"></span>
-            </div>
-            <div class="metric-values">
-              <div class="metric-item">
-                <span class="metric-label">Current</span>
-                <span class="metric-value font-mono" id="ecs-tree-current-time"
-                  >0.00 ms</span
-                >
-              </div>
-              <div class="metric-item">
-                <span class="metric-label">Average</span>
-                <span class="metric-value font-mono" id="ecs-tree-avg-time"
-                  >0.00 ms</span
-                >
-              </div>
-              <div class="metric-item">
-                <span class="metric-label">99th %</span>
-                <span class="metric-value font-mono" id="ecs-tree-p99-time"
-                  >0.00 ms</span
-                >
-              </div>
-            </div>
-          </div>
-
-          <!-- 5. bitECS -->
-          <div class="metric-card bitecs-card" id="card-metric-bitecs">
-            <div class="card-header-simple">
-              <h3>bitECS S&P</h3>
-              <span class="legend-dot legend-bitecs"></span>
-            </div>
-            <div class="metric-values">
-              <div class="metric-item">
-                <span class="metric-label">Current</span>
-                <span class="metric-value font-mono" id="bitecs-current-time"
-                  >0.00 ms</span
-                >
-              </div>
-              <div class="metric-item">
-                <span class="metric-label">Average</span>
-                <span class="metric-value font-mono" id="bitecs-avg-time"
-                  >0.00 ms</span
-                >
-              </div>
-              <div class="metric-item">
-                <span class="metric-label">99th %</span>
-                <span class="metric-value font-mono" id="bitecs-p99-time"
-                  >0.00 ms</span
-                >
-              </div>
-            </div>
-          </div>
-
-          <!-- 6. WASM ECS S&P -->
-          <div class="metric-card wasm-card" id="card-metric-wasm">
-            <div class="card-header-simple">
-              <h3>WASM ECS S&P</h3>
-              <span class="legend-dot legend-wasm"></span>
-            </div>
-            <div class="metric-values">
-              <div class="metric-item">
-                <span class="metric-label">Current</span>
-                <span class="metric-value font-mono" id="wasm-current-time"
-                  >0.00 ms</span
-                >
-              </div>
-              <div class="metric-item">
-                <span class="metric-label">Average</span>
-                <span class="metric-value font-mono" id="wasm-avg-time"
-                  >0.00 ms</span
-                >
-              </div>
-              <div class="metric-item">
-                <span class="metric-label">99th %</span>
-                <span class="metric-value font-mono" id="wasm-p99-time"
-                  >0.00 ms</span
-                >
-              </div>
-            </div>
-          </div>
 
           <!-- Speedup Comparison Card -->
           <div class="metric-card speedup-card">
@@ -319,12 +130,7 @@
               <div class="comparison-select-container">
                 <h3>Speedup vs</h3>
                 <select id="compare-baseline-select" class="compare-select">
-                  <option value="oop">OOP S&P</option>
-                  <option value="oop-tree">OOP Tree</option>
-                  <option value="ecs">ECS Custom S&P</option>
-                  <option value="ecs-tree">ECS Tree</option>
-                  <option value="bitecs">bitECS S&P</option>
-                  <option value="wasm">WASM ECS S&P</option>
+                  <!-- Dynamic options will be injected here -->
                 </select>
               </div>
               <button
@@ -370,29 +176,7 @@
           </div>
           <div class="chart-legend-container">
             <div class="chart-legend">
-              <span class="legend-item" id="legend-item-oop"
-                ><span class="legend-color legend-oop"></span>OOP S&P</span
-              >
-              <span class="legend-item" id="legend-item-oop-tree"
-                ><span class="legend-color legend-oop-tree"></span>OOP
-                Tree</span
-              >
-              <span class="legend-item" id="legend-item-ecs"
-                ><span class="legend-color legend-ecs"></span>ECS Custom
-                S&P</span
-              >
-              <span class="legend-item" id="legend-item-ecs-tree"
-                ><span class="legend-color legend-ecs-tree"></span>ECS Custom
-                Tree</span
-              >
-              <span class="legend-item" id="legend-item-bitecs"
-                ><span class="legend-color legend-bitecs"></span>bitECS
-                S&P</span
-              >
-              <span class="legend-item" id="legend-item-wasm"
-                ><span class="legend-color legend-wasm"></span>WASM ECS
-                S&P</span
-              >
+              <!-- Dynamic legend items will be injected here -->
             </div>
             <span class="chart-frame-counter"
               >Frame: <span id="chart-frame-index">0</span> /
@@ -409,65 +193,7 @@
       <section class="section-output">
         <h2>Live Visualizer Output</h2>
         <div class="visualizer-grid">
-          <div class="canvas-card" id="card-canvas-oop">
-            <div class="canvas-header">
-              <h3>OOP S&P</h3>
-              <span class="render-fps" id="oop-fps">0 FPS</span>
-            </div>
-            <div class="canvas-container">
-              <canvas id="canvas-oop" width="1000" height="800"></canvas>
-            </div>
-          </div>
-
-          <div class="canvas-card" id="card-canvas-oop-tree">
-            <div class="canvas-header">
-              <h3>OOP Tree</h3>
-              <span class="render-fps" id="oop-tree-fps">0 FPS</span>
-            </div>
-            <div class="canvas-container">
-              <canvas id="canvas-oop-tree" width="1000" height="800"></canvas>
-            </div>
-          </div>
-
-          <div class="canvas-card" id="card-canvas-ecs">
-            <div class="canvas-header">
-              <h3>ECS Custom S&P</h3>
-              <span class="render-fps" id="ecs-fps">0 FPS</span>
-            </div>
-            <div class="canvas-container">
-              <canvas id="canvas-ecs" width="1000" height="800"></canvas>
-            </div>
-          </div>
-
-          <div class="canvas-card" id="card-canvas-ecs-tree">
-            <div class="canvas-header">
-              <h3>ECS Tree</h3>
-              <span class="render-fps" id="ecs-tree-fps">0 FPS</span>
-            </div>
-            <div class="canvas-container">
-              <canvas id="canvas-ecs-tree" width="1000" height="800"></canvas>
-            </div>
-          </div>
-
-          <div class="canvas-card" id="card-canvas-bitecs">
-            <div class="canvas-header">
-              <h3>bitECS S&P</h3>
-              <span class="render-fps" id="bitecs-fps">0 FPS</span>
-            </div>
-            <div class="canvas-container">
-              <canvas id="canvas-bitecs" width="1000" height="800"></canvas>
-            </div>
-          </div>
-
-          <div class="canvas-card" id="card-canvas-wasm">
-            <div class="canvas-header">
-              <h3>WASM ECS S&P</h3>
-              <span class="render-fps" id="wasm-fps">0 FPS</span>
-            </div>
-            <div class="canvas-container">
-              <canvas id="canvas-wasm" width="1000" height="800"></canvas>
-            </div>
-          </div>
+          <!-- Dynamic visualizer canvases will be injected here -->
         </div>
       </section>
 

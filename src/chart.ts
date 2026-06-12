@@ -1,9 +1,6 @@
-let labelY_oop = -1;
-let labelY_oop_tree = -1;
-let labelY_ecs = -1;
-let labelY_ecs_tree = -1;
-let labelY_bitecs = -1;
-let labelY_wasm = -1;
+import { SIMULATOR_REGISTRY } from './registry';
+
+const labelYPositions: Record<string, number> = {};
 
 let currentChartMaxLog = -1;
 let currentChartMinLog = -1;
@@ -11,12 +8,9 @@ let currentChartMaxLin = -1;
 let currentChartMinLin = -1;
 
 export function resetChartLabels() {
-  labelY_oop = -1;
-  labelY_oop_tree = -1;
-  labelY_ecs = -1;
-  labelY_ecs_tree = -1;
-  labelY_bitecs = -1;
-  labelY_wasm = -1;
+  Object.keys(labelYPositions).forEach(key => {
+    labelYPositions[key] = -1;
+  });
   currentChartMaxLog = -1;
   currentChartMinLog = -1;
   currentChartMaxLin = -1;
@@ -76,12 +70,7 @@ export function getLinearYRatio(val: number, minY: number, chartMax: number): nu
 // === HIGH-PERFORMANCE CUSTOM SVG CHART DRAWING ===
 export function drawChartSVG(
   containerId: string,
-  oopTimes: number[],
-  oopTreeTimes: number[],
-  ecsTimes: number[],
-  ecsTreeTimes: number[],
-  bitecsTimes: number[],
-  wasmTimes: number[],
+  simulatorTimes: Record<string, number[]>,
   benchmarkLength: number,
   useLogScale: boolean = true,
   useZeroBaseline: boolean = true
@@ -114,6 +103,7 @@ export function drawChartSVG(
   let maxTime = 0.0;
 
   const updateMinMax = (times: number[]) => {
+    if (!times) return;
     for (let i = 0; i < times.length; i++) {
       const t = times[i];
       if (t > 0) {
@@ -123,12 +113,9 @@ export function drawChartSVG(
     }
   };
 
-  updateMinMax(oopTimes);
-  updateMinMax(oopTreeTimes);
-  updateMinMax(ecsTimes);
-  updateMinMax(ecsTreeTimes);
-  updateMinMax(bitecsTimes);
-  updateMinMax(wasmTimes);
+  Object.values(simulatorTimes).forEach(times => {
+    updateMinMax(times);
+  });
 
   let getYPos: (val: number) => number;
   const gridValues: number[] = [];
@@ -368,295 +355,92 @@ export function drawChartSVG(
     yAxis.setAttribute("class", "chart-axis");
     svg.appendChild(yAxis);
 
-    // OOP path
-    const oopPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    oopPath.setAttribute("fill", "none");
-    oopPath.setAttribute("stroke", "var(--color-oop)");
-    oopPath.setAttribute("stroke-width", "2.5");
-    oopPath.setAttribute("stroke-linecap", "round");
-    oopPath.setAttribute("stroke-linejoin", "round");
-    oopPath.setAttribute("class", "line-oop");
-    svg.appendChild(oopPath);
+    const activeSvg = svg;
+    // Dynamic paths and labels creation from registry
+    SIMULATOR_REGISTRY.forEach(sim => {
+      // Path
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke", sim.color);
+      path.setAttribute("stroke-width", "2.5");
+      path.setAttribute("stroke-linecap", "round");
+      path.setAttribute("stroke-linejoin", "round");
+      path.setAttribute("class", `line-${sim.id}`);
+      activeSvg.appendChild(path);
 
-    // OOP Tree path
-    const oopTreePath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    oopTreePath.setAttribute("fill", "none");
-    oopTreePath.setAttribute("stroke", "var(--color-oop-tree)");
-    oopTreePath.setAttribute("stroke-width", "2.5");
-    oopTreePath.setAttribute("stroke-linecap", "round");
-    oopTreePath.setAttribute("stroke-linejoin", "round");
-    oopTreePath.setAttribute("class", "line-oop-tree");
-    svg.appendChild(oopTreePath);
-
-    // ECS path
-    const ecsPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    ecsPath.setAttribute("fill", "none");
-    ecsPath.setAttribute("stroke", "var(--color-ecs)");
-    ecsPath.setAttribute("stroke-width", "2.5");
-    ecsPath.setAttribute("stroke-linecap", "round");
-    ecsPath.setAttribute("stroke-linejoin", "round");
-    ecsPath.setAttribute("class", "line-ecs");
-    svg.appendChild(ecsPath);
-
-    // ECS Tree path
-    const ecsTreePath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    ecsTreePath.setAttribute("fill", "none");
-    ecsTreePath.setAttribute("stroke", "var(--color-ecs-tree)");
-    ecsTreePath.setAttribute("stroke-width", "2.5");
-    ecsTreePath.setAttribute("stroke-linecap", "round");
-    ecsTreePath.setAttribute("stroke-linejoin", "round");
-    ecsTreePath.setAttribute("class", "line-ecs-tree");
-    svg.appendChild(ecsTreePath);
-
-    // bitECS path
-    const bitecsPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    bitecsPath.setAttribute("fill", "none");
-    bitecsPath.setAttribute("stroke", "var(--color-bitecs)");
-    bitecsPath.setAttribute("stroke-width", "2.5");
-    bitecsPath.setAttribute("stroke-linecap", "round");
-    bitecsPath.setAttribute("stroke-linejoin", "round");
-    bitecsPath.setAttribute("class", "line-bitecs");
-    svg.appendChild(bitecsPath);
-
-    // WASM path
-    const wasmPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    wasmPath.setAttribute("fill", "none");
-    wasmPath.setAttribute("stroke", "var(--color-wasm)");
-    wasmPath.setAttribute("stroke-width", "2.5");
-    wasmPath.setAttribute("stroke-linecap", "round");
-    wasmPath.setAttribute("stroke-linejoin", "round");
-    wasmPath.setAttribute("class", "line-wasm");
-    svg.appendChild(wasmPath);
-
-    // OOP label
-    const oopText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    oopText.setAttribute("fill", "var(--color-oop)");
-    oopText.setAttribute("font-size", "10px");
-    oopText.setAttribute("font-family", "JetBrains Mono, monospace");
-    oopText.setAttribute("font-weight", "bold");
-    oopText.setAttribute("class", "label-oop");
-    oopText.textContent = "OOP S&P";
-    svg.appendChild(oopText);
-
-    // OOP Tree label
-    const oopTreeText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    oopTreeText.setAttribute("fill", "var(--color-oop-tree)");
-    oopTreeText.setAttribute("font-size", "10px");
-    oopTreeText.setAttribute("font-family", "JetBrains Mono, monospace");
-    oopTreeText.setAttribute("font-weight", "bold");
-    oopTreeText.setAttribute("class", "label-oop-tree");
-    oopTreeText.textContent = "OOP Tree";
-    svg.appendChild(oopTreeText);
-
-    // ECS label
-    const ecsText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    ecsText.setAttribute("fill", "var(--color-ecs)");
-    ecsText.setAttribute("font-size", "10px");
-    ecsText.setAttribute("font-family", "JetBrains Mono, monospace");
-    ecsText.setAttribute("font-weight", "bold");
-    ecsText.setAttribute("class", "label-ecs");
-    ecsText.textContent = "ECS Custom S&P";
-    svg.appendChild(ecsText);
-
-    // ECS Tree label
-    const ecsTreeText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    ecsTreeText.setAttribute("fill", "var(--color-ecs-tree)");
-    ecsTreeText.setAttribute("font-size", "10px");
-    ecsTreeText.setAttribute("font-family", "JetBrains Mono, monospace");
-    ecsTreeText.setAttribute("font-weight", "bold");
-    ecsTreeText.setAttribute("class", "label-ecs-tree");
-    ecsTreeText.textContent = "ECS Custom Tree";
-    svg.appendChild(ecsTreeText);
-
-    // bitECS label
-    const bitecsText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    bitecsText.setAttribute("fill", "var(--color-bitecs)");
-    bitecsText.setAttribute("font-size", "10px");
-    bitecsText.setAttribute("font-family", "JetBrains Mono, monospace");
-    bitecsText.setAttribute("font-weight", "bold");
-    bitecsText.setAttribute("class", "label-bitecs");
-    bitecsText.textContent = "bitECS S&P";
-    svg.appendChild(bitecsText);
-
-    // WASM label
-    const wasmText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    wasmText.setAttribute("fill", "var(--color-wasm)");
-    wasmText.setAttribute("font-size", "10px");
-    wasmText.setAttribute("font-family", "JetBrains Mono, monospace");
-    wasmText.setAttribute("font-weight", "bold");
-    wasmText.setAttribute("class", "label-wasm");
-    wasmText.textContent = "WASM ECS S&P";
-    svg.appendChild(wasmText);
+      // Label text
+      const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      text.setAttribute("fill", sim.color);
+      text.setAttribute("font-size", "10px");
+      text.setAttribute("font-family", "JetBrains Mono, monospace");
+      text.setAttribute("font-weight", "bold");
+      text.setAttribute("class", `label-${sim.id}`);
+      text.textContent = sim.name;
+      activeSvg.appendChild(text);
+    });
 
     container.appendChild(svg);
   }
 
+  const currentSvg = svg!;
   // Retrieve paths and update their "d" attributes to avoid DOM recreation churn
-  const lineOOP = svg.querySelector('.line-oop') as SVGPathElement;
-  const lineOOPTree = svg.querySelector('.line-oop-tree') as SVGPathElement;
-  const lineECS = svg.querySelector('.line-ecs') as SVGPathElement;
-  const lineECSTree = svg.querySelector('.line-ecs-tree') as SVGPathElement;
-  const lineBitecs = svg.querySelector('.line-bitecs') as SVGPathElement;
-  const lineWasm = svg.querySelector('.line-wasm') as SVGPathElement;
+  SIMULATOR_REGISTRY.forEach(sim => {
+    const path = currentSvg.querySelector(`.line-${sim.id}`) as SVGPathElement;
+    if (path) {
+      const times = simulatorTimes[sim.id] || [];
+      path.setAttribute("d", buildPathD(times));
+    }
+  });
 
-  if (lineOOP) {
-    lineOOP.setAttribute("d", buildPathD(oopTimes));
-  }
-  if (lineOOPTree) {
-    lineOOPTree.setAttribute("d", buildPathD(oopTreeTimes));
-  }
-  if (lineECS) {
-    lineECS.setAttribute("d", buildPathD(ecsTimes));
-  }
-  if (lineECSTree) {
-    lineECSTree.setAttribute("d", buildPathD(ecsTreeTimes));
-  }
-  if (lineBitecs) {
-    lineBitecs.setAttribute("d", buildPathD(bitecsTimes));
-  }
-  if (lineWasm) {
-    lineWasm.setAttribute("d", buildPathD(wasmTimes));
+  // 1. Gather active labels and compute target & smoothed Y positions
+  const activeLabels = SIMULATOR_REGISTRY
+    .map(sim => {
+      const times = simulatorTimes[sim.id] || [];
+      if (times.length === 0) return null;
+      const targetY = getYPos(times[times.length - 1]) + 3;
+      const currentY = labelYPositions[sim.id] ?? targetY;
+      labelYPositions[sim.id] = currentY * 0.95 + targetY * 0.05;
+      return { id: sim.id, targetY, currentY: labelYPositions[sim.id] };
+    })
+    .filter((l): l is NonNullable<typeof l> => l !== null);
+
+  // 2. Sort current Y positions matching target Y order to prevent crossing
+  activeLabels.sort((a, b) => a.targetY - b.targetY);
+  const sortedY = activeLabels.map(l => l.currentY).sort((a, b) => a - b);
+  activeLabels.forEach((l, i) => l.currentY = sortedY[i]);
+
+  // 3. Relax overlaps (min 10px spacing)
+  for (let iter = 0; iter < 8; iter++) {
+    for (let i = 0; i < activeLabels.length - 1; i++) {
+      const overlap = 10 - (activeLabels[i + 1].currentY - activeLabels[i].currentY);
+      if (overlap > 0) {
+        activeLabels[i].currentY -= overlap * 0.15;
+        activeLabels[i + 1].currentY += overlap * 0.15;
+      }
+    }
   }
 
-  // Retrieve text labels and update their positions dynamically
-  const labelOOP = svg.querySelector('.label-oop') as SVGTextElement;
-  const labelOOPTree = svg.querySelector('.label-oop-tree') as SVGTextElement;
-  const labelECS = svg.querySelector('.label-ecs') as SVGTextElement;
-  const labelECSTree = svg.querySelector('.label-ecs-tree') as SVGTextElement;
-  const labelBitecs = svg.querySelector('.label-bitecs') as SVGTextElement;
-  const labelWasm = svg.querySelector('.label-wasm') as SVGTextElement;
+  // 4. Update SVG element positions and visibility
+  SIMULATOR_REGISTRY.forEach(sim => {
+    const label = currentSvg.querySelector(`.label-${sim.id}`) as SVGTextElement;
+    if (!label) return;
 
-  if (oopTimes.length > 0) {
-    const lastIdx = oopTimes.length - 1;
-    const ratioX = benchmarkLength > 1 ? lastIdx / (benchmarkLength - 1) : 0;
-    const xPos = paddingLeft + (ratioX * chartW) + 5;
-    const targetY = getYPos(oopTimes[lastIdx]) + 3;
-    if (labelY_oop === -1) {
-      labelY_oop = targetY;
+    const item = activeLabels.find(l => l.id === sim.id);
+    if (item) {
+      const times = simulatorTimes[sim.id] || [];
+      const ratioX = benchmarkLength > 1 ? (times.length - 1) / (benchmarkLength - 1) : 0;
+      const xPos = paddingLeft + (ratioX * chartW) + 5;
+      const clampedY = Math.max(paddingTop, Math.min(svgH - paddingBottom, item.currentY));
+
+      labelYPositions[sim.id] = clampedY;
+      label.setAttribute("x", xPos.toString());
+      label.setAttribute("y", clampedY.toString());
+      label.style.display = "block";
     } else {
-      labelY_oop = labelY_oop * 0.95 + targetY * 0.05;
+      labelYPositions[sim.id] = -1;
+      label.style.display = "none";
     }
-    if (labelOOP) {
-      labelOOP.setAttribute("x", xPos.toString());
-      labelOOP.setAttribute("y", labelY_oop.toString());
-      labelOOP.style.display = "block";
-    }
-  } else {
-    labelY_oop = -1;
-    if (labelOOP) {
-      labelOOP.style.display = "none";
-    }
-  }
-
-  if (oopTreeTimes.length > 0) {
-    const lastIdx = oopTreeTimes.length - 1;
-    const ratioX = benchmarkLength > 1 ? lastIdx / (benchmarkLength - 1) : 0;
-    const xPos = paddingLeft + (ratioX * chartW) + 5;
-    const targetY = getYPos(oopTreeTimes[lastIdx]) + 3;
-    if (labelY_oop_tree === -1) {
-      labelY_oop_tree = targetY;
-    } else {
-      labelY_oop_tree = labelY_oop_tree * 0.95 + targetY * 0.05;
-    }
-    if (labelOOPTree) {
-      labelOOPTree.setAttribute("x", xPos.toString());
-      labelOOPTree.setAttribute("y", labelY_oop_tree.toString());
-      labelOOPTree.style.display = "block";
-    }
-  } else {
-    labelY_oop_tree = -1;
-    if (labelOOPTree) {
-      labelOOPTree.style.display = "none";
-    }
-  }
-
-  if (ecsTimes.length > 0) {
-    const lastIdx = ecsTimes.length - 1;
-    const ratioX = benchmarkLength > 1 ? lastIdx / (benchmarkLength - 1) : 0;
-    const xPos = paddingLeft + (ratioX * chartW) + 5;
-    const targetY = getYPos(ecsTimes[lastIdx]) + 3;
-    if (labelY_ecs === -1) {
-      labelY_ecs = targetY;
-    } else {
-      labelY_ecs = labelY_ecs * 0.95 + targetY * 0.05;
-    }
-    if (labelECS) {
-      labelECS.setAttribute("x", xPos.toString());
-      labelECS.setAttribute("y", labelY_ecs.toString());
-      labelECS.style.display = "block";
-    }
-  } else {
-    labelY_ecs = -1;
-    if (labelECS) {
-      labelECS.style.display = "none";
-    }
-  }
-
-  if (ecsTreeTimes.length > 0) {
-    const lastIdx = ecsTreeTimes.length - 1;
-    const ratioX = benchmarkLength > 1 ? lastIdx / (benchmarkLength - 1) : 0;
-    const xPos = paddingLeft + (ratioX * chartW) + 5;
-    const targetY = getYPos(ecsTreeTimes[lastIdx]) + 3;
-    if (labelY_ecs_tree === -1) {
-      labelY_ecs_tree = targetY;
-    } else {
-      labelY_ecs_tree = labelY_ecs_tree * 0.95 + targetY * 0.05;
-    }
-    if (labelECSTree) {
-      labelECSTree.setAttribute("x", xPos.toString());
-      labelECSTree.setAttribute("y", labelY_ecs_tree.toString());
-      labelECSTree.style.display = "block";
-    }
-  } else {
-    labelY_ecs_tree = -1;
-    if (labelECSTree) {
-      labelECSTree.style.display = "none";
-    }
-  }
-
-  if (bitecsTimes.length > 0) {
-    const lastIdx = bitecsTimes.length - 1;
-    const ratioX = benchmarkLength > 1 ? lastIdx / (benchmarkLength - 1) : 0;
-    const xPos = paddingLeft + (ratioX * chartW) + 5;
-    const targetY = getYPos(bitecsTimes[lastIdx]) + 3;
-    if (labelY_bitecs === -1) {
-      labelY_bitecs = targetY;
-    } else {
-      labelY_bitecs = labelY_bitecs * 0.95 + targetY * 0.05;
-    }
-    if (labelBitecs) {
-      labelBitecs.setAttribute("x", xPos.toString());
-      labelBitecs.setAttribute("y", labelY_bitecs.toString());
-      labelBitecs.style.display = "block";
-    }
-  } else {
-    labelY_bitecs = -1;
-    if (labelBitecs) {
-      labelBitecs.style.display = "none";
-    }
-  }
-
-  if (wasmTimes.length > 0) {
-    const lastIdx = wasmTimes.length - 1;
-    const ratioX = benchmarkLength > 1 ? lastIdx / (benchmarkLength - 1) : 0;
-    const xPos = paddingLeft + (ratioX * chartW) + 5;
-    const targetY = getYPos(wasmTimes[lastIdx]) + 3;
-    if (labelY_wasm === -1) {
-      labelY_wasm = targetY;
-    } else {
-      labelY_wasm = labelY_wasm * 0.95 + targetY * 0.05;
-    }
-    if (labelWasm) {
-      labelWasm.setAttribute("x", xPos.toString());
-      labelWasm.setAttribute("y", labelY_wasm.toString());
-      labelWasm.style.display = "block";
-    }
-  } else {
-    labelY_wasm = -1;
-    if (labelWasm) {
-      labelWasm.style.display = "none";
-    }
-  }
+  });
 }
 
 // Helper to get nice max/min for log scale (1-2.5-5-7.5 sequence)

@@ -264,12 +264,6 @@ input[type="range"] {
   border-radius: 50%;
 }
 
-.legend-oop { background-color: var(--color-oop); }
-.legend-oop-tree { background-color: var(--color-oop-tree); }
-.legend-ecs { background-color: var(--color-ecs); }
-.legend-ecs-tree { background-color: var(--color-ecs-tree); }
-.legend-bitecs { background-color: var(--color-bitecs); }
-.legend-wasm { background-color: var(--color-wasm); }
 
 .metric-values {
   display: flex;
@@ -292,12 +286,6 @@ input[type="range"] {
   font-weight: 700;
 }
 
-.oop-card .metric-value { color: var(--color-oop); }
-.oop-tree-card .metric-value { color: var(--color-oop-tree); }
-.ecs-card .metric-value { color: var(--color-ecs); }
-.ecs-tree-card .metric-value { color: var(--color-ecs-tree); }
-.bitecs-card .metric-value { color: var(--color-bitecs); }
-.wasm-card .metric-value { color: var(--color-wasm); }
 
 /* Speedup Card */
 .speedup-card {
@@ -427,12 +415,6 @@ input[type="range"] {
   border-radius: 2px;
 }
 
-.legend-color.legend-oop { background-color: var(--color-oop); }
-.legend-color.legend-oop-tree { background-color: var(--color-oop-tree); }
-.legend-color.legend-ecs { background-color: var(--color-ecs); }
-.legend-color.legend-ecs-tree { background-color: var(--color-ecs-tree); }
-.legend-color.legend-bitecs { background-color: var(--color-bitecs); }
-.legend-color.legend-wasm { background-color: var(--color-wasm); }
 
 .chart-frame-counter {
   font-family: var(--font-mono);
@@ -639,12 +621,15 @@ canvas {
 .section-simulators-toggle {
   margin-bottom: 20px;
   display: flex;
-  align-items: center;
-  gap: 15px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
   background-color: var(--bg-card);
   border-bottom: 1px solid var(--border-color);
   padding-top: 15px;
   padding-bottom: 15px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .toggle-title {
@@ -655,8 +640,78 @@ canvas {
 
 .toggle-group {
   display: flex;
+  flex-direction: row;
   flex-wrap: wrap;
-  gap: 15px;
+  gap: 16px;
+  width: 100%;
+}
+
+.toggle-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(15, 23, 42, 0.015);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px 16px;
+  flex: 1 1 350px;
+  box-sizing: border-box;
+}
+
+.toggle-section-header {
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.05);
+  padding-bottom: 6px;
+  margin-bottom: 2px;
+}
+
+.toggle-containers-list {
+  display: flex;
+  flex-direction: row;
+  gap: 7px;
+  width: 100%;
+}
+
+.toggle-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(15, 23, 42, 0.015);
+  border: 1px dashed rgba(15, 23, 42, 0.08);
+  border-radius: 6px;
+  padding: 10px 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.toggle-subgroups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.toggle-subgroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.subgroup-title {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--color-text-primary);
+  min-width: 90px;
+}
+
+.subgroup-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .toggle-label {
@@ -670,6 +725,14 @@ canvas {
 
 .toggle-label input {
   cursor: pointer;
+}
+
+.toggle-color-square {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
 }
 
 .hidden {
