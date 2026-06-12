@@ -480,13 +480,11 @@ if (urlParams.has('embed')) {
 }
 
 // Notify parent of iframe height changes for dynamic auto-resizing
-const resizeObserver = new ResizeObserver((entries) => {
-  for (let entry of entries) {
-    window.parent.postMessage({
-      type: 'resize-iframe',
-      height: entry.contentRect.height
-    }, '*');
-  }
+const resizeObserver = new ResizeObserver(() => {
+  window.parent.postMessage({
+    type: 'resize-iframe',
+    height: document.body.scrollHeight || document.documentElement.scrollHeight
+  }, '*');
 });
 resizeObserver.observe(document.body);
 
