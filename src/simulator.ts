@@ -22,15 +22,6 @@ export interface EntityState {
  * various architectures (OOP S&P, OOP Tree, Custom ECS, bitECS) uniformly.
  */
 export interface Simulator {
-  /**
-   * Unique identifier of this simulator (e.g. 'oop', 'ecs').
-   */
-  id: string;
-  
-  /**
-   * Display name shown in UI headers and chart legends.
-   */
-  name: string;
   
 
   

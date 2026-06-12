@@ -10,8 +10,6 @@ const buffer = await response.arrayBuffer();
 const wasmModule = await WebAssembly.compile(buffer);
 
 export class WasmECSSimulator implements Simulator {
-  id: string;
-  name: string;
   private sortType: 'insertion' | 'quick' | 'merge' | 'native';
 
   private wasm: any = null;
@@ -22,13 +20,9 @@ export class WasmECSSimulator implements Simulator {
   private lastCollisionCount = 0;
 
   constructor(
-    sortType: 'insertion' | 'quick' | 'merge' | 'native' = 'insertion',
-    id = 'wasm',
-    name = 'WASM ECS S&P'
+    sortType: 'insertion' | 'quick' | 'merge' | 'native' = 'insertion'
   ) {
     this.sortType = sortType;
-    this.id = id;
-    this.name = name;
   }
 
   init(numEntities: number, _width: number, _height: number, _prng: SeededPRNG) {

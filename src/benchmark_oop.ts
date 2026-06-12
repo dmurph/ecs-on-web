@@ -224,8 +224,6 @@ export function updateMovement(
  * Algorithm: Sweep-and-Prune (S&P) using 1D Insertion Sort along the X-axis.
  */
 export class OOPSimulator implements Simulator {
-  id: string;
-  name: string;
   private sortType: 'insertion' | 'quick' | 'merge' | 'native';
 
   private entities: GameEntity[] = [];
@@ -238,13 +236,9 @@ export class OOPSimulator implements Simulator {
   private lastCollisionCount = 0;
 
   constructor(
-    sortType: 'insertion' | 'quick' | 'merge' | 'native' = 'insertion',
-    id = 'oop',
-    name = 'OOP S&P'
+    sortType: 'insertion' | 'quick' | 'merge' | 'native' = 'insertion'
   ) {
     this.sortType = sortType;
-    this.id = id;
-    this.name = name;
   }
 
   /**

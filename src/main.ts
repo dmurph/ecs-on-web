@@ -36,9 +36,35 @@ let currentFrame = 0;
 let animationFrameId: number | null = null;
 let totalFramesProcessed = 0;
 
-const simulators: Simulator[] = SIMULATOR_REGISTRY.map(sim => sim.createInstance());
+interface SimulatorWrapper {
+  id: string;
+  name: string;
+  instance: Simulator;
+}
 
-let activeSimulators: Simulator[] = simulators.filter((_, idx) => SIMULATOR_REGISTRY[idx].activeByDefault);
+const simulators: SimulatorWrapper[] = SIMULATOR_REGISTRY.map(sim => ({
+  id: sim.id,
+  name: sim.name,
+  instance: sim.createInstance()
+}));
+
+function getStoredActiveSimulatorIds(): string[] | null {
+  try {
+    const val = localStorage.getItem('ecs-benchmark-active-simulators');
+    return val ? JSON.parse(val) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+const storedActiveIds = getStoredActiveSimulatorIds();
+let activeSimulators: SimulatorWrapper[] = [];
+if (storedActiveIds && storedActiveIds.length > 0) {
+  activeSimulators = simulators.filter(s => storedActiveIds.includes(s.id));
+}
+if (activeSimulators.length === 0) {
+  activeSimulators = simulators.filter((_, idx) => SIMULATOR_REGISTRY[idx].activeByDefault);
+}
 
 const prngs: Record<string, SeededPRNG> = {};
 SIMULATOR_REGISTRY.forEach(sim => {
@@ -57,13 +83,13 @@ function getResultsMarkdown(): string {
   const coherenceLabel = movementBehavior.charAt(0).toUpperCase() + movementBehavior.slice(1);
   
   const baselineSim = simulators.find(s => s.id === baselineSimulatorId);
-  const baselineTimes = baselineSim ? baselineSim.getTimes() : [];
+  const baselineTimes = baselineSim ? baselineSim.instance.getTimes() : [];
   const avgBaseline = baselineTimes.length ? baselineTimes.reduce((a, b) => a + b, 0) / baselineTimes.length : 0;
   const baselineActive = baselineSim ? activeSimulators.includes(baselineSim) : false;
 
   let tableRows = '';
   for (const sim of activeSimulators) {
-    const times = sim.getTimes();
+    const times = sim.instance.getTimes();
     const sum = times.reduce((a, b) => a + b, 0);
     const avg = times.length ? sum / times.length : 0;
     const sorted = [...times].sort((a, b) => a - b);
@@ -107,16 +133,16 @@ function initEntities() {
   const h = firstCanvas ? firstCanvas.height : 800;
 
   for (const sim of simulators) {
-    sim.init(numEntities, w, h, prngs[sim.id]);
+    sim.instance.init(numEntities, w, h, prngs[sim.id]);
   }
 
   // Sync initial positions to ensure identical starting states
   const baselineSim = simulators[0];
   if (baselineSim) {
-    const baselinePositions = baselineSim.getPositions();
+    const baselinePositions = baselineSim.instance.getPositions();
     for (const sim of simulators) {
       if (sim !== baselineSim) {
-        sim.setPositions(baselinePositions);
+        sim.instance.setPositions(baselinePositions);
       }
     }
   }
@@ -136,7 +162,7 @@ function resetBenchmark() {
   }
 
   for (const sim of simulators) {
-    sim.clearTimes();
+    sim.instance.clearTimes();
   }
 
   resetChartLabels();
@@ -158,7 +184,7 @@ function resetBenchmark() {
   for (const sim of activeSimulators) {
     const ctx = contexts[sim.id];
     if (ctx) {
-      sim.render(ctx);
+      sim.instance.render(ctx);
     }
   }
   
@@ -168,7 +194,7 @@ function resetBenchmark() {
 function drawChart() {
   const timesMap: Record<string, number[]> = {};
   activeSimulators.forEach(sim => {
-    timesMap[sim.id] = sim.getTimes();
+    timesMap[sim.id] = sim.instance.getTimes();
   });
   
   drawChartSVG('svg-chart-container', timesMap, benchmarkLength, useLogScale, useZeroBaseline);
@@ -247,7 +273,7 @@ function loop() {
   const collisionCounts: Record<string, number> = {};
   for (const sim of activeSimulators) {
     const prng = prngs[sim.id];
-    const result = sim.update(w, h, speedMultiplier, movementBehavior, prng);
+    const result = sim.instance.update(w, h, speedMultiplier, movementBehavior, prng);
     times[sim.id] = result.time;
     collisionCounts[sim.id] = result.collisionCount;
   }
@@ -259,7 +285,7 @@ function loop() {
     if (warmupFrame >= warmupFramesCount) {
       isWarmingUp = false;
       for (const s of simulators) {
-        s.clearTimes();
+        s.instance.clearTimes();
       }
       updateStatus('Running', 'running');
     }
@@ -273,7 +299,7 @@ function loop() {
       const instantiatedSim = simulators.find(s => s.id === sim.id)!;
       const isActive = activeSimulators.includes(instantiatedSim);
       timesMap[sim.id] = isActive ? times[sim.id] : 0;
-      historyMap[sim.id] = instantiatedSim.getTimes();
+      historyMap[sim.id] = instantiatedSim.instance.getTimes();
     });
 
     updateMetricsDisplay({
@@ -291,7 +317,7 @@ function loop() {
   for (const sim of activeSimulators) {
     const ctx = contexts[sim.id];
     if (ctx) {
-      sim.render(ctx);
+      sim.instance.render(ctx);
     }
   }
 
@@ -312,7 +338,7 @@ function finishBenchmark() {
 }
 
 // === RUN INITIAL SETUP ===
-initUI();
+initUI(activeSimulators.map(s => s.id));
 updateBaselineOptions(activeSimulators.map(s => s.id), baselineSimulatorId);
 
 contexts = {};
@@ -330,7 +356,7 @@ function triggerMetricsUpdate() {
   SIMULATOR_REGISTRY.forEach(sim => {
     const instantiatedSim = simulators.find(s => s.id === sim.id)!;
     const isActive = activeSimulators.includes(instantiatedSim);
-    const times = instantiatedSim.getTimes();
+    const times = instantiatedSim.instance.getTimes();
     timesMap[sim.id] = isActive ? (times[times.length - 1] || 0) : 0;
     historyMap[sim.id] = times;
   });
@@ -378,8 +404,12 @@ setupUIListeners({
     }
     activeSimulators.sort((a, b) => simulators.indexOf(a) - simulators.indexOf(b));
 
-    // Handle baseline change if current baseline was deactivated
     const activeIds = activeSimulators.map(s => s.id);
+    try {
+      localStorage.setItem('ecs-benchmark-active-simulators', JSON.stringify(activeIds));
+    } catch (e) {}
+
+    // Handle baseline change if current baseline was deactivated
     if (!activeIds.includes(baselineSimulatorId)) {
       if (activeIds.length > 0) {
         baselineSimulatorId = activeIds[0];

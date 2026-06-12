@@ -238,8 +238,6 @@ export function updateMovement(
  * querying coordinates directly via component typed arrays.
  */
 export class BitECSSimulator implements Simulator {
-  id: string;
-  name: string;
   private sortType: 'insertion' | 'quick' | 'merge' | 'native';
 
   private world: any = null;
@@ -254,13 +252,9 @@ export class BitECSSimulator implements Simulator {
   private pairsCount = 0;
 
   constructor(
-    sortType: 'insertion' | 'quick' | 'merge' | 'native' = 'insertion',
-    id = 'bitecs',
-    name = 'bitECS S&P'
+    sortType: 'insertion' | 'quick' | 'merge' | 'native' = 'insertion'
   ) {
     this.sortType = sortType;
-    this.id = id;
-    this.name = name;
   }
 
   /**

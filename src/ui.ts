@@ -102,7 +102,7 @@ const UI_GROUPS: GroupDefinition[] = [
   }
 ];
 
-function generateToggles() {
+function generateToggles(activeSimulatorIds?: string[]) {
   const container = document.querySelector('.toggle-group')!;
   if (!container) return;
   container.innerHTML = '';
@@ -156,7 +156,8 @@ function generateToggles() {
               displayName = 'Insertion';
             }
 
-            label.innerHTML = `<input type="checkbox" id="toggle-${sim.id}" ${sim.activeByDefault ? 'checked' : ''} /><span class="toggle-color-square" style="background-color: ${sim.color}"></span>${displayName}`;
+            const isChecked = activeSimulatorIds ? activeSimulatorIds.includes(sim.id) : sim.activeByDefault;
+            label.innerHTML = `<input type="checkbox" id="toggle-${sim.id}" ${isChecked ? 'checked' : ''} /><span class="toggle-color-square" style="background-color: ${sim.color}"></span>${displayName}`;
             togglesContainer.appendChild(label);
           }
         });
@@ -257,9 +258,9 @@ function generateCanvases() {
   });
 }
 
-export function initUI() {
+export function initUI(activeSimulatorIds?: string[]) {
   // Generate dynamic DOM structures
-  generateToggles();
+  generateToggles(activeSimulatorIds);
   generateMetricCards();
   generateLegend();
   generateCanvases();

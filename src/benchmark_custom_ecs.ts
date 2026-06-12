@@ -236,8 +236,6 @@ export function updateMovement(
  * checking bounds by indexing directly into component arrays.
  */
 export class CustomECSSimulator implements Simulator {
-  id: string;
-  name: string;
   private sortType: 'insertion' | 'quick' | 'merge' | 'native';
 
   private ecsData: ECSData | null = null;
@@ -250,13 +248,9 @@ export class CustomECSSimulator implements Simulator {
   private pairsCount = 0;
 
   constructor(
-    sortType: 'insertion' | 'quick' | 'merge' | 'native' = 'insertion',
-    id = 'ecs',
-    name = 'ECS Custom S&P'
+    sortType: 'insertion' | 'quick' | 'merge' | 'native' = 'insertion'
   ) {
     this.sortType = sortType;
-    this.id = id;
-    this.name = name;
   }
 
   /**

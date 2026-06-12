@@ -650,13 +650,6 @@ export function updateMovement(
  * allowing sub-linear updates during highly coherent motion.
  */
 export class OOPTreeSimulator implements Simulator {
-  id: string;
-  name: string;
-
-  constructor(id = 'oop-tree', name = 'OOP Tree') {
-    this.id = id;
-    this.name = name;
-  }
 
   private entities: TreeGameEntity[] = [];
   private entitiesById: TreeGameEntity[] = [];
