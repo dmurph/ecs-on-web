@@ -687,3 +687,23 @@ canvas {
   color: var(--color-text-secondary);
   font-weight: normal;
 }
+
+/* Embed Mode Styles */
+body.is-embedded .main-header,
+body.is-embedded .section-intro,
+body.is-embedded .blog-section {
+  display: none !important;
+}
+
+body.is-embedded .app-container {
+  padding: 0;
+  margin: 0;
+  max-width: 100%;
+  box-shadow: none;
+  background-color: transparent;
+}
+
+body.is-embedded {
+  background-color: transparent;
+}
+

@@ -473,3 +473,21 @@ setupResizeListener(() => {
 resetBenchmark();
 updateUI(numEntities, speedMultiplier, benchmarkLength);
 
+// Handle embed mode (hiding header, footer, etc.)
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.has('embed')) {
+  document.body.classList.add('is-embedded');
+}
+
+// Notify parent of iframe height changes for dynamic auto-resizing
+const resizeObserver = new ResizeObserver((entries) => {
+  for (let entry of entries) {
+    window.parent.postMessage({
+      type: 'resize-iframe',
+      height: entry.contentRect.height
+    }, '*');
+  }
+});
+resizeObserver.observe(document.body);
+
+
