@@ -7,3 +7,13 @@ export const ENTITY_COLORS = [
 ];
 
 export const ENTITY_MAX_SPEED = 3.5;
+
+export const SortMethod = {
+  Insertion: 'insertion',
+  Quick: 'quick',
+  Merge: 'merge',
+  Native: 'native'
+} as const;
+
+export type SortMethod = typeof SortMethod[keyof typeof SortMethod];
+

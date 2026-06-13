@@ -1,4 +1,4 @@
-import { ENTITY_COLORS } from './config';
+import { ENTITY_COLORS, SortMethod } from './config';
 import { SeededPRNG } from './prng';
 import type { Simulator, EntityState } from './simulator';
 import { renderCanvas } from './renderer';
@@ -10,7 +10,7 @@ const buffer = await response.arrayBuffer();
 const wasmModule = await WebAssembly.compile(buffer);
 
 export class WasmECSSimulator implements Simulator {
-  private sortType: 'insertion' | 'quick' | 'merge' | 'native';
+  private sortMethod: SortMethod;
 
   private wasm: any = null;
   private ecsData: ECSData | null = null;
@@ -20,9 +20,9 @@ export class WasmECSSimulator implements Simulator {
   private lastCollisionCount = 0;
 
   constructor(
-    sortType: 'insertion' | 'quick' | 'merge' | 'native' = 'insertion'
+    sortMethod: SortMethod = SortMethod.Insertion
   ) {
-    this.sortType = sortType;
+    this.sortMethod = sortMethod;
   }
 
   init(numEntities: number, _width: number, _height: number, _prng: SeededPRNG) {
@@ -72,8 +72,8 @@ export class WasmECSSimulator implements Simulator {
     else if (behavior === 'erratic') behaviorId = 2;
 
     let sortTypeId = 0; // insertion
-    if (this.sortType === 'quick') sortTypeId = 1;
-    else if (this.sortType === 'merge') sortTypeId = 2;
+    if (this.sortMethod === SortMethod.Quick) sortTypeId = 1;
+    else if (this.sortMethod === SortMethod.Merge) sortTypeId = 2;
 
     const collisionCount = this.wasm.update(
       width,

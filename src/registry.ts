@@ -4,6 +4,7 @@ import { OOPTreeSimulator } from './benchmark_oop_tree';
 import { CustomECSSimulator } from './benchmark_custom_ecs';
 import { ECSTreeSimulator } from './benchmark_ecs_tree';
 import { WasmECSSimulator } from './benchmark_wasm_ecs';
+import { SortMethod } from './config';
 
 export interface SimulatorConfig {
   id: string;
@@ -19,28 +20,28 @@ export const SIMULATOR_REGISTRY: SimulatorConfig[] = [
     name: 'OOP S&P (Insertion)',
     color: '#6d28d9',
     activeByDefault: true,
-    createInstance: () => new OOPSimulator('insertion')
+    createInstance: () => new OOPSimulator(SortMethod.Insertion)
   },
   {
     id: 'oop-quick',
     name: 'OOP S&P (Quick)',
     color: '#4f46e5',
     activeByDefault: false,
-    createInstance: () => new OOPSimulator('quick')
+    createInstance: () => new OOPSimulator(SortMethod.Quick)
   },
   {
     id: 'oop-merge',
     name: 'OOP S&P (Merge)',
     color: '#9333ea',
     activeByDefault: false,
-    createInstance: () => new OOPSimulator('merge')
+    createInstance: () => new OOPSimulator(SortMethod.Merge)
   },
   {
     id: 'oop-native',
     name: 'OOP S&P (Native)',
     color: '#1d4ed8',
     activeByDefault: false,
-    createInstance: () => new OOPSimulator('native')
+    createInstance: () => new OOPSimulator(SortMethod.Native)
   },
   {
     id: 'oop-tree',
@@ -54,28 +55,28 @@ export const SIMULATOR_REGISTRY: SimulatorConfig[] = [
     name: 'ECS S&P (Insertion)',
     color: '#0f766e',
     activeByDefault: true,
-    createInstance: () => new CustomECSSimulator('insertion')
+    createInstance: () => new CustomECSSimulator(SortMethod.Insertion)
   },
   {
     id: 'ecs-quick',
     name: 'ECS S&P (Quick)',
     color: '#059669',
     activeByDefault: false,
-    createInstance: () => new CustomECSSimulator('quick')
+    createInstance: () => new CustomECSSimulator(SortMethod.Quick)
   },
   {
     id: 'ecs-merge',
     name: 'ECS S&P (Merge)',
     color: '#0891b2',
     activeByDefault: false,
-    createInstance: () => new CustomECSSimulator('merge')
+    createInstance: () => new CustomECSSimulator(SortMethod.Merge)
   },
   {
     id: 'ecs-native',
     name: 'ECS S&P (Native)',
     color: '#15803d',
     activeByDefault: false,
-    createInstance: () => new CustomECSSimulator('native')
+    createInstance: () => new CustomECSSimulator(SortMethod.Native)
   },
   {
     id: 'ecs-tree',
@@ -89,20 +90,21 @@ export const SIMULATOR_REGISTRY: SimulatorConfig[] = [
     name: 'WASM ECS S&P (Insertion)',
     color: '#be185d',
     activeByDefault: true,
-    createInstance: () => new WasmECSSimulator('insertion')
+    createInstance: () => new WasmECSSimulator(SortMethod.Insertion)
   },
   {
     id: 'wasm-quick',
     name: 'WASM ECS S&P (Quick)',
     color: '#e11d48',
     activeByDefault: false,
-    createInstance: () => new WasmECSSimulator('quick')
+    createInstance: () => new WasmECSSimulator(SortMethod.Quick)
   },
   {
     id: 'wasm-merge',
     name: 'WASM ECS S&P (Merge)',
     color: '#9d174d',
     activeByDefault: false,
-    createInstance: () => new WasmECSSimulator('merge')
+    createInstance: () => new WasmECSSimulator(SortMethod.Merge)
   }
 ];
+

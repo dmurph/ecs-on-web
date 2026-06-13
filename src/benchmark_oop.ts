@@ -1,12 +1,96 @@
-import { ENTITY_COLORS, ENTITY_MAX_SPEED } from './config';
+import { ENTITY_COLORS, ENTITY_MAX_SPEED, SortMethod } from './config';
 import { SeededPRNG } from './prng';
 import type { Simulator, EntityState } from './simulator';
 import { renderCanvas } from './renderer';
-import {
-  insertionSortOOP,
-  quickSortOOP,
-  mergeSortOOP
-} from './sorting';
+
+// === INTERNAL SORTING ALGORITHMS ===
+function insertionSortRangeOOP(entities: GameEntity[], left: number, right: number) {
+  for (let i = left + 1; i <= right; i++) {
+    const current = entities[i];
+    let j = i - 1;
+    while (j >= left && entities[j].x > current.x) {
+      entities[j + 1] = entities[j];
+      j--;
+    }
+    entities[j + 1] = current;
+  }
+}
+
+function insertionSortOOP(entities: GameEntity[]) {
+  insertionSortRangeOOP(entities, 0, entities.length - 1);
+}
+
+function quickSortOOP(entities: GameEntity[], left: number, right: number) {
+  if (right - left < 12) {
+    insertionSortRangeOOP(entities, left, right);
+    return;
+  }
+  const pivotIdx = partitionOOP(entities, left, right);
+  quickSortOOP(entities, left, pivotIdx - 1);
+  quickSortOOP(entities, pivotIdx + 1, right);
+}
+
+function partitionOOP(entities: GameEntity[], left: number, right: number): number {
+  const mid = (left + right) >> 1;
+  const tempMid = entities[mid];
+  entities[mid] = entities[right];
+  entities[right] = tempMid;
+
+  const pivotVal = entities[right].x;
+  let i = left - 1;
+  for (let j = left; j < right; j++) {
+    if (entities[j].x < pivotVal) {
+      i++;
+      const temp = entities[i];
+      entities[i] = entities[j];
+      entities[j] = temp;
+    }
+  }
+  const temp = entities[i + 1];
+  entities[i + 1] = entities[right];
+  entities[right] = temp;
+  return i + 1;
+}
+
+function mergeSortOOP(entities: GameEntity[], temp: GameEntity[], left: number, right: number) {
+  for (let i = 0; i < entities.length; i++) {
+    temp[i] = entities[i];
+  }
+  mergeSortOOPRec(temp, entities, left, right);
+}
+
+function mergeSortOOPRec(src: GameEntity[], dst: GameEntity[], left: number, right: number) {
+  if (right - left < 12) {
+    insertionSortRangeOOP(dst, left, right);
+    for (let m = left; m <= right; m++) {
+      src[m] = dst[m];
+    }
+    return;
+  }
+  const mid = (left + right) >> 1;
+  mergeSortOOPRec(dst, src, left, mid);
+  mergeSortOOPRec(dst, src, mid + 1, right);
+  
+  let i = left;
+  let j = mid + 1;
+  let k = left;
+
+  while (i <= mid && j <= right) {
+    if (src[i].x <= src[j].x) {
+      dst[k++] = src[i++];
+    } else {
+      dst[k++] = src[j++];
+    }
+  }
+
+  while (i <= mid) {
+    dst[k++] = src[i++];
+  }
+  while (j <= right) {
+    dst[k++] = src[j++];
+  }
+}
+
 
 export class GameEntity {
   id: number;
@@ -46,7 +130,7 @@ export class GameEntity {
 
 export function runBroadphase(
   entities: GameEntity[],
-  sortType: 'insertion' | 'quick' | 'merge' | 'native' = 'insertion',
+  sortMethod: SortMethod = SortMethod.Insertion,
   tempEntities?: GameEntity[]
 ): number {
   let pairCount = 0;
@@ -57,13 +141,13 @@ export function runBroadphase(
   }
 
   // 1. Sort entities based on chosen algorithm
-  if (sortType === 'insertion') {
+  if (sortMethod === SortMethod.Insertion) {
     insertionSortOOP(entities);
-  } else if (sortType === 'quick') {
+  } else if (sortMethod === SortMethod.Quick) {
     quickSortOOP(entities, 0, len - 1);
-  } else if (sortType === 'merge' && tempEntities) {
+  } else if (sortMethod === SortMethod.Merge && tempEntities) {
     mergeSortOOP(entities, tempEntities, 0, len - 1);
-  } else if (sortType === 'native') {
+  } else if (sortMethod === SortMethod.Native) {
     entities.sort((a, b) => a.x - b.x);
   }
 
@@ -224,7 +308,7 @@ export function updateMovement(
  * Algorithm: Sweep-and-Prune (S&P) using 1D Insertion Sort along the X-axis.
  */
 export class OOPSimulator implements Simulator {
-  private sortType: 'insertion' | 'quick' | 'merge' | 'native';
+  private sortMethod: SortMethod;
 
   private entities: GameEntity[] = [];
   private entitiesById: GameEntity[] = [];
@@ -236,9 +320,9 @@ export class OOPSimulator implements Simulator {
   private lastCollisionCount = 0;
 
   constructor(
-    sortType: 'insertion' | 'quick' | 'merge' | 'native' = 'insertion'
+    sortMethod: SortMethod = SortMethod.Insertion
   ) {
-    this.sortType = sortType;
+    this.sortMethod = sortMethod;
   }
 
   /**
@@ -274,7 +358,7 @@ export class OOPSimulator implements Simulator {
   update(width: number, height: number, speedMultiplier: number, behavior: string, prng: SeededPRNG): { time: number, collisionCount: number } {
     const start = performance.now();
     updateMovement(this.entitiesById, width, height, speedMultiplier, behavior, prng);
-    runBroadphase(this.entities, this.sortType, this.tempEntities);
+    runBroadphase(this.entities, this.sortMethod, this.tempEntities);
     
     this.colliding.fill(0);
     this.lastCollisionCount = resolveCollisions(this.entities, this.colliding, this.pairsBuffer);

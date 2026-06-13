@@ -1,12 +1,95 @@
-import { ENTITY_COLORS, ENTITY_MAX_SPEED } from './config';
+import { ENTITY_COLORS, ENTITY_MAX_SPEED, SortMethod } from './config';
 import { SeededPRNG } from './prng';
 import type { Simulator, EntityState } from './simulator';
 import { renderCanvas } from './renderer';
-import {
-  insertionSortCustomECS,
-  quickSortCustomECS,
-  mergeSortCustomECS
-} from './sorting';
+
+// === INTERNAL SORTING ALGORITHMS ===
+function insertionSortRangeECS(indices: Int32Array, posX: Float64Array | Float32Array, left: number, right: number) {
+  for (let i = left + 1; i <= right; i++) {
+    const currIdx = indices[i];
+    const currX = posX[currIdx];
+    let j = i - 1;
+    while (j >= left && posX[indices[j]] > currX) {
+      indices[j + 1] = indices[j];
+      j--;
+    }
+    indices[j + 1] = currIdx;
+  }
+}
+
+function insertionSortCustomECS(indices: Int32Array, posX: Float64Array) {
+  insertionSortRangeECS(indices, posX, 0, indices.length - 1);
+}
+
+function quickSortCustomECS(indices: Int32Array, posX: Float64Array, left: number, right: number) {
+  if (right - left < 12) {
+    insertionSortRangeECS(indices, posX, left, right);
+    return;
+  }
+  const pivotIdx = partitionCustomECS(indices, posX, left, right);
+  quickSortCustomECS(indices, posX, left, pivotIdx - 1);
+  quickSortCustomECS(indices, posX, pivotIdx + 1, right);
+}
+
+function partitionCustomECS(indices: Int32Array, posX: Float64Array, left: number, right: number): number {
+  const mid = (left + right) >> 1;
+  const tempMid = indices[mid];
+  indices[mid] = indices[right];
+  indices[right] = tempMid;
+
+  const pivotVal = posX[indices[right]];
+  let i = left - 1;
+  for (let j = left; j < right; j++) {
+    if (posX[indices[j]] < pivotVal) {
+      i++;
+      const temp = indices[i];
+      indices[i] = indices[j];
+      indices[j] = temp;
+    }
+  }
+  const temp = indices[i + 1];
+  indices[i + 1] = indices[right];
+  indices[right] = temp;
+  return i + 1;
+}
+
+function mergeSortCustomECS(indices: Int32Array, posX: Float64Array, temp: Int32Array, left: number, right: number) {
+  temp.set(indices);
+  mergeSortCustomECSRec(temp, indices, posX, left, right);
+}
+
+function mergeSortCustomECSRec(src: Int32Array, dst: Int32Array, posX: Float64Array, left: number, right: number) {
+  if (right - left < 12) {
+    insertionSortRangeECS(dst, posX, left, right);
+    for (let m = left; m <= right; m++) {
+      src[m] = dst[m];
+    }
+    return;
+  }
+  const mid = (left + right) >> 1;
+  mergeSortCustomECSRec(dst, src, posX, left, mid);
+  mergeSortCustomECSRec(dst, src, posX, mid + 1, right);
+  
+  let i = left;
+  let j = mid + 1;
+  let k = left;
+
+  while (i <= mid && j <= right) {
+    if (posX[src[i]] <= posX[src[j]]) {
+      dst[k++] = src[i++];
+    } else {
+      dst[k++] = src[j++];
+    }
+  }
+
+  while (i <= mid) {
+    dst[k++] = src[i++];
+  }
+  while (j <= right) {
+    dst[k++] = src[j++];
+  }
+}
+
 
 export interface ECSData {
   posX: Float64Array;
@@ -54,7 +137,7 @@ export function runBroadphase(
   posYwh: Float64Array,
   outPairs: Int32Array,
   ids: Int32Array,
-  sortType: 'insertion' | 'quick' | 'merge' | 'native' = 'insertion',
+  sortMethod: SortMethod = SortMethod.Insertion,
   tempIndices?: Int32Array
 ): number {
   let pairCount = 0;
@@ -62,13 +145,13 @@ export function runBroadphase(
   const maxPairs = outPairs.length / 2;
 
   // 1. Sort indices based on chosen algorithm
-  if (sortType === 'insertion') {
+  if (sortMethod === SortMethod.Insertion) {
     insertionSortCustomECS(indices, posX);
-  } else if (sortType === 'quick') {
+  } else if (sortMethod === SortMethod.Quick) {
     quickSortCustomECS(indices, posX, 0, len - 1);
-  } else if (sortType === 'merge' && tempIndices) {
+  } else if (sortMethod === SortMethod.Merge && tempIndices) {
     mergeSortCustomECS(indices, posX, tempIndices, 0, len - 1);
-  } else if (sortType === 'native') {
+  } else if (sortMethod === SortMethod.Native) {
     indices.sort((a, b) => posX[a] - posX[b]);
   }
 
@@ -238,7 +321,7 @@ export function updateMovement(
  * checking bounds by indexing directly into component arrays.
  */
 export class CustomECSSimulator implements Simulator {
-  private sortType: 'insertion' | 'quick' | 'merge' | 'native';
+  private sortMethod: SortMethod;
 
   private ecsData: ECSData | null = null;
   private tempIndices: Int32Array = new Int32Array(0);
@@ -250,9 +333,9 @@ export class CustomECSSimulator implements Simulator {
   private pairsCount = 0;
 
   constructor(
-    sortType: 'insertion' | 'quick' | 'merge' | 'native' = 'insertion'
+    sortMethod: SortMethod = SortMethod.Insertion
   ) {
-    this.sortType = sortType;
+    this.sortMethod = sortMethod;
   }
 
   /**
@@ -287,7 +370,7 @@ export class CustomECSSimulator implements Simulator {
         this.ecsData.posYwh,
         this.pairsBuffer,
         this.ecsData.id,
-        this.sortType,
+        this.sortMethod,
         this.tempIndices
       );
       
