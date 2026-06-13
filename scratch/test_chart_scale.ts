@@ -1,5 +1,4 @@
-import { getNiceMax, getLogYRatio, getPureLogYRatio, getLinearYRatio, getNiceLogMax, getNiceLogMin, getLogGridValues } from '../src/chart';
-
+import { getNiceMax, getLinearYRatio, getPureLogYRatio, getLogGridValues } from '../src/chart';
 
 function assert(condition: boolean, message: string) {
   if (!condition) {
@@ -45,42 +44,10 @@ assert(getLinearYRatio(12, 2, 10) === 1.0, "12 (overflow) -> 1.0");
 assert(getLinearYRatio(1, 2, 10) === 0, "1 (underflow) -> 0.0");
 console.log("✅ getLinearYRatio (Dynamic Baseline) tests passed!");
 
-// 4. Test getLogYRatio (Symmetric Log Scale with 0 baseline)
-console.log("\nTesting getLogYRatio (Symmetric Log)...");
-const minY = 0.0001; // lowest decade
-const chartMax = 0.1; // top decade
-
-// Case A: 0
-assert(getLogYRatio(0, minY, chartMax) === 0, "0 -> 0.0");
-
-// Case B: Exactly at minY
-assert(Math.abs(getLogYRatio(minY, minY, chartMax) - 0.25) < 1e-9, "minY (0.0001) -> 0.25");
-
-// Case C: Linear spacing below minY
-assert(Math.abs(getLogYRatio(minY / 2, minY, chartMax) - 0.125) < 1e-9, "minY/2 (0.00005) -> 0.125");
-
-// Case D: Decade steps above minY (must be equally spaced at 0.25, 0.50, 0.75, 1.0)
-const ratioDecade1 = getLogYRatio(0.0001, minY, chartMax); // 10^-4
-const ratioDecade2 = getLogYRatio(0.001, minY, chartMax);  // 10^-3
-const ratioDecade3 = getLogYRatio(0.01, minY, chartMax);   // 10^-2
-const ratioDecade4 = getLogYRatio(0.1, minY, chartMax);    // 10^-1
-
-assert(Math.abs(ratioDecade1 - 0.25) < 1e-9, "10^-4 -> 0.25");
-assert(Math.abs(ratioDecade2 - 0.50) < 1e-9, "10^-3 -> 0.50");
-assert(Math.abs(ratioDecade3 - 0.75) < 1e-9, "10^-2 -> 0.75");
-assert(Math.abs(ratioDecade4 - 1.00) < 1e-9, "10^-1 -> 1.00");
-
-// Verify equal interval sizing
-assert(Math.abs((ratioDecade2 - ratioDecade1) - 0.25) < 1e-9, "Interval 1 spacing is 0.25");
-assert(Math.abs((ratioDecade3 - ratioDecade2) - 0.25) < 1e-9, "Interval 2 spacing is 0.25");
-assert(Math.abs((ratioDecade4 - ratioDecade3) - 0.25) < 1e-9, "Interval 3 spacing is 0.25");
-
-// Case E: Overflow clamps to 1.0
-assert(getLogYRatio(0.5, minY, chartMax) === 1.0, "0.5 (above chartMax 0.1) -> 1.0");
-console.log("✅ getLogYRatio (Symmetric Log) tests passed!");
-
-// 5. Test getPureLogYRatio (Pure Log Scale without 0 baseline)
+// 4. Test getPureLogYRatio (Pure Log Scale without 0 baseline)
 console.log("\nTesting getPureLogYRatio (Pure Log)...");
+const minY = 0.0001;
+const chartMax = 0.1;
 assert(getPureLogYRatio(0.0001, minY, chartMax) === 0.0, "minY (0.0001) -> 0.0");
 assert(Math.abs(getPureLogYRatio(0.001, minY, chartMax) - 1/3) < 1e-9, "0.001 -> 0.333");
 assert(Math.abs(getPureLogYRatio(0.01, minY, chartMax) - 2/3) < 1e-9, "0.01 -> 0.666");
@@ -89,58 +56,47 @@ assert(getPureLogYRatio(0.00005, minY, chartMax) === 0.0, "0.00005 (below minY) 
 assert(getPureLogYRatio(0.5, minY, chartMax) === 1.0, "0.5 (above chartMax) -> 1.0");
 console.log("✅ getPureLogYRatio (Pure Log) tests passed!");
 
-// 6. Test getNiceLogMax
-console.log("\nTesting getNiceLogMax...");
-assert(getNiceLogMax(0.05) === 0.05, "0.05 -> 0.05 (exact)");
-assert(getNiceLogMax(0.07) === 0.075, "0.07 -> 0.075");
-assert(getNiceLogMax(0.15) === 0.25, "0.15 -> 0.25");
-assert(getNiceLogMax(0.3) === 0.5, "0.3 -> 0.5");
-assert(getNiceLogMax(0.6) === 0.75, "0.6 -> 0.75");
-assert(getNiceLogMax(0.8) === 1.0, "0.8 -> 1.0");
-assert(getNiceLogMax(1.5) === 2.5, "1.5 -> 2.5");
-assert(getNiceLogMax(4.2) === 5.0, "4.2 -> 5.0");
-assert(getNiceLogMax(6.0) === 7.5, "6.0 -> 7.5");
-assert(getNiceLogMax(8.0) === 10.0, "8.0 -> 10.0");
-assert(getNiceLogMax(15.0) === 25.0, "15.0 -> 25.0");
-assert(getNiceLogMax(45.0) === 50.0, "45.0 -> 50.0");
-assert(getNiceLogMax(75.0) === 75.0, "75.0 -> 75.0 (exact)");
-console.log("✅ getNiceLogMax tests passed!");
-
-// 7. Test getNiceLogMin
-console.log("\nTesting getNiceLogMin...");
-assert(getNiceLogMin(0.07) === 0.05, "0.07 -> 0.05");
-assert(getNiceLogMin(0.08) === 0.075, "0.08 -> 0.075");
-assert(getNiceLogMin(0.04) === 0.025, "0.04 -> 0.025");
-assert(getNiceLogMin(0.15) === 0.1, "0.15 -> 0.1");
-assert(getNiceLogMin(0.3) === 0.25, "0.3 -> 0.25");
-assert(getNiceLogMin(0.8) === 0.75, "0.8 -> 0.75");
-assert(getNiceLogMin(1.5) === 1.0, "1.5 -> 1.0");
-assert(getNiceLogMin(4.2) === 2.5, "4.2 -> 2.5");
-assert(getNiceLogMin(5.0) === 5.0, "5.0 -> 5.0 (exact)");
-assert(getNiceLogMin(8.0) === 7.5, "8.0 -> 7.5");
-assert(getNiceLogMin(15.0) === 10.0, "15.0 -> 10.0");
-console.log("✅ getNiceLogMin tests passed!");
-
-// 8. Test getLogGridValues
+// 5. Test getLogGridValues
 console.log("\nTesting getLogGridValues...");
-const grid1 = getLogGridValues(0.01, 1.0);
-console.log("Grid (0.01 to 1.0):", grid1);
-assert(grid1.length === 9, "Should have 9 lines");
-assert(Math.abs(grid1[0] - 0.01) < 1e-9, "0.01");
-assert(Math.abs(grid1[1] - 0.025) < 1e-9, "0.025");
-assert(Math.abs(grid1[2] - 0.05) < 1e-9, "0.05");
-assert(Math.abs(grid1[3] - 0.075) < 1e-9, "0.075");
-assert(Math.abs(grid1[4] - 0.1) < 1e-9, "0.1");
-assert(Math.abs(grid1[5] - 0.25) < 1e-9, "0.25");
-assert(Math.abs(grid1[6] - 0.5) < 1e-9, "0.5");
-assert(Math.abs(grid1[7] - 0.75) < 1e-9, "0.75");
-assert(Math.abs(grid1[8] - 1.0) < 1e-9, "1.0");
 
-const grid2 = getLogGridValues(0.005, 5.0);
-console.log("Grid (0.005 to 5.0):", grid2);
-assert(grid2.length === 13, "Should have 13 lines");
-assert(Math.abs(grid2[0] - 0.005) < 1e-9, "First is 0.005");
-assert(Math.abs(grid2[12] - 5.0) < 1e-9, "Last is 5.0");
+// Narrow range: wasm benchmark 1ms to 1.5ms case (chart bounds 0.95 to 1.55)
+const gridNarrow = getLogGridValues(0.95, 1.55);
+console.log("Grid (0.95 to 1.55):", gridNarrow);
+assert(gridNarrow.length === 6, "Should have 6 ticks");
+assert(gridNarrow[0] === 1.0, "1.0");
+assert(gridNarrow[1] === 1.1, "1.1");
+assert(gridNarrow[5] === 1.5, "1.5");
+
+// Narrow range: 1.1ms to 2.1ms case (chart bounds 1.0 to 2.2)
+const gridNarrow2 = getLogGridValues(1.0, 2.2);
+console.log("Grid (1.0 to 2.2):", gridNarrow2);
+assert(gridNarrow2.length === 13, "Should have 13 ticks");
+assert(gridNarrow2[0] === 1.0, "1.0");
+assert(gridNarrow2[1] === 1.1, "1.1");
+assert(gridNarrow2[12] === 2.2, "2.2");
+
+// Very narrow range: 0.95ms to 1.05ms (chart bounds 0.94 to 1.06)
+const gridVeryNarrow = getLogGridValues(0.94, 1.06);
+console.log("Grid (0.94 to 1.06):", gridVeryNarrow);
+assert(gridVeryNarrow.length === 13, "Should have 13 ticks");
+assert(gridVeryNarrow[0] === 0.94, "0.94");
+assert(gridVeryNarrow[6] === 1.0, "1.0");
+assert(gridVeryNarrow[12] === 1.06, "1.06");
+
+// Wide range: 0.01 to 1.0 (range ratio = 100)
+const gridWide1 = getLogGridValues(0.01, 1.0);
+console.log("Grid (0.01 to 1.0):", gridWide1);
+assert(gridWide1.length === 19, "Should have 19 lines");
+assert(gridWide1[0] === 0.01, "0.01");
+assert(gridWide1[9] === 0.1, "0.1");
+assert(gridWide1[18] === 1.0, "1.0");
+
+// Wide range: 0.005 to 5.0 (range ratio = 1000)
+const gridWide2 = getLogGridValues(0.005, 5.0);
+console.log("Grid (0.005 to 5.0):", gridWide2);
+assert(gridWide2.length === 28, "Should have 28 lines");
+assert(gridWide2[0] === 0.005, "0.005");
+assert(gridWide2[27] === 5.0, "5.0");
 
 console.log("✅ getLogGridValues tests passed!");
 

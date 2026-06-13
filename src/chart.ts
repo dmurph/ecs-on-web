@@ -2,8 +2,10 @@ import { SIMULATOR_REGISTRY } from './registry';
 
 const labelYPositions: Record<string, number> = {};
 
-let currentChartMaxLog = -1;
-let currentChartMinLog = -1;
+let currentChartMaxLogSym = -1;
+let currentChartMinLogSym = -1;
+let currentChartMaxLogPure = -1;
+let currentChartMinLogPure = -1;
 let currentChartMaxLin = -1;
 let currentChartMinLin = -1;
 
@@ -11,8 +13,10 @@ export function resetChartLabels() {
   Object.keys(labelYPositions).forEach(key => {
     labelYPositions[key] = -1;
   });
-  currentChartMaxLog = -1;
-  currentChartMinLog = -1;
+  currentChartMaxLogSym = -1;
+  currentChartMinLogSym = -1;
+  currentChartMaxLogPure = -1;
+  currentChartMinLogPure = -1;
   currentChartMaxLin = -1;
   currentChartMinLin = -1;
 }
@@ -124,57 +128,69 @@ export function drawChartSVG(
 
   if (minTime !== Infinity && maxTime > 0) {
     if (useLogScale) {
+      const spanData = maxTime - minTime;
+      let targetMaxVal: number;
+      let targetMin: number;
+
       if (useZeroBaseline) {
-        // Symlog bounds
-        const targetMax = getNiceLogMax(maxTime);
-        
-        if (currentChartMaxLog === -1) {
-          currentChartMaxLog = targetMax;
-        } else if (targetMax > currentChartMaxLog) {
-          currentChartMaxLog = targetMax;
+        targetMaxVal = maxTime * 1.15;
+        targetMin = targetMaxVal / 1000;
+
+        if (currentChartMaxLogSym === -1 || currentChartMinLogSym === -1) {
+          currentChartMaxLogSym = targetMaxVal;
+          currentChartMinLogSym = targetMin;
+        } else {
+          if (targetMaxVal > currentChartMaxLogSym) {
+            currentChartMaxLogSym = targetMaxVal;
+          }
+          if (targetMin < currentChartMinLogSym) {
+            currentChartMinLogSym = targetMin;
+          }
         }
-        chartMax = currentChartMaxLog;
-        minY = chartMax / 1000;
-        
+        chartMax = currentChartMaxLogSym;
+        minY = currentChartMinLogSym;
+      } else {
+        if (spanData === 0) {
+          targetMaxVal = maxTime * 1.15;
+          targetMin = maxTime * 0.85;
+        } else {
+          targetMaxVal = maxTime + 0.15 * spanData;
+          targetMin = Math.max(minTime - 0.15 * spanData, minTime * 0.85, targetMaxVal / 1000);
+        }
+
+        if (currentChartMaxLogPure === -1 || currentChartMinLogPure === -1) {
+          currentChartMaxLogPure = targetMaxVal;
+          currentChartMinLogPure = targetMin;
+        } else {
+          if (targetMaxVal > currentChartMaxLogPure) {
+            currentChartMaxLogPure = targetMaxVal;
+          }
+          if (targetMin < currentChartMinLogPure) {
+            currentChartMinLogPure = targetMin;
+          }
+        }
+        chartMax = currentChartMaxLogPure;
+        minY = currentChartMinLogPure;
+      }
+
+      if (useZeroBaseline) {
         getYPos = (val: number): number => {
           const ratio = getLogYRatio(val, minY, chartMax);
           return svgH - paddingBottom - (ratio * chartH);
         };
-
         gridValues.push(0);
-        gridValues.push(...getLogGridValues(minY, chartMax));
       } else {
-        // Pure Log bounds (dynamic min and max)
-        const targetMax = getNiceLogMax(maxTime);
-        const targetMin = getNiceLogMin(minTime);
-
-        if (currentChartMaxLog === -1 || currentChartMinLog === -1) {
-          currentChartMaxLog = targetMax;
-          currentChartMinLog = targetMin;
-        } else {
-          if (targetMax > currentChartMaxLog) {
-            currentChartMaxLog = targetMax;
-          }
-          if (targetMin < currentChartMinLog) {
-            currentChartMinLog = targetMin;
-          }
-        }
-        
-        chartMax = currentChartMaxLog;
-        minY = currentChartMinLog;
-        
         getYPos = (val: number): number => {
           const ratio = getPureLogYRatio(val, minY, chartMax);
           return svgH - paddingBottom - (ratio * chartH);
         };
-
-        gridValues.push(...getLogGridValues(minY, chartMax));
       }
+      gridValues.push(...getLogGridValues(minY, chartMax));
     } else {
       // Linear scale bounds
       if (useZeroBaseline) {
         minY = 0.0;
-        const targetMax = maxTime * 1.1; // 10% margin
+        const targetMax = maxTime * 1.15; // 15% margin
         if (currentChartMaxLin === -1) {
           currentChartMaxLin = getNiceMax(targetMax);
         } else if (targetMax > currentChartMaxLin) {
@@ -182,9 +198,18 @@ export function drawChartSVG(
         }
         chartMax = currentChartMaxLin;
       } else {
-        // Dynamic baseline (10% margins)
-        const targetMin = Math.max(0, minTime * 0.9);
-        const targetMax = maxTime * 1.1;
+        // Dynamic baseline (15% margins of data span)
+        const spanData = maxTime - minTime;
+        let targetMin: number;
+        let targetMax: number;
+        if (spanData === 0) {
+          targetMax = maxTime * 1.15;
+          targetMin = Math.max(0, maxTime * 0.85);
+        } else {
+          targetMin = Math.max(0, minTime - 0.15 * spanData);
+          targetMax = maxTime + 0.15 * spanData;
+        }
+
         if (currentChartMaxLin === -1 || currentChartMinLin === -1) {
           currentChartMinLin = targetMin;
           currentChartMaxLin = targetMax;
@@ -274,6 +299,8 @@ export function drawChartSVG(
     svg.setAttribute("data-scale", scaleKey);
 
     // Draw grid lines and labels
+    const rangeRatio = minY > 0 ? (chartMax / minY) : Infinity;
+
     for (const yVal of gridValues) {
       const yPos = getYPos(yVal);
       const isPowerOf10 = yVal === 0 || Math.abs(Math.log10(yVal) - Math.round(Math.log10(yVal))) < 1e-9;
@@ -297,22 +324,29 @@ export function drawChartSVG(
       svg.appendChild(line);
 
       // Label
-      const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-      text.setAttribute("x", (paddingLeft - 8).toString());
-      text.setAttribute("y", (yPos + 4).toString());
-      text.setAttribute("text-anchor", "end");
-      if (isMajor) {
-        text.setAttribute("fill", "var(--color-text-secondary)");
-        text.setAttribute("font-weight", "bold");
-        text.setAttribute("class", "chart-label chart-label-major");
-      } else {
-        text.setAttribute("fill", "var(--color-text-dim)");
-        text.setAttribute("class", "chart-label");
+      const exponent = Math.floor(Math.log10(yVal));
+      const base = Math.pow(10, exponent);
+      const mult = Math.round((yVal / base) * 1e9) / 1e9;
+      const shouldLabel = !useLogScale || (rangeRatio <= 10.0) || yVal === 0 || [1.0, 2.0, 5.0].includes(mult);
+
+      if (shouldLabel) {
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("x", (paddingLeft - 8).toString());
+        text.setAttribute("y", (yPos + 4).toString());
+        text.setAttribute("text-anchor", "end");
+        if (isMajor) {
+          text.setAttribute("fill", "var(--color-text-secondary)");
+          text.setAttribute("font-weight", "bold");
+          text.setAttribute("class", "chart-label chart-label-major");
+        } else {
+          text.setAttribute("fill", "var(--color-text-dim)");
+          text.setAttribute("class", "chart-label");
+        }
+        text.setAttribute("font-size", "10px");
+        text.setAttribute("font-family", "JetBrains Mono, monospace");
+        text.textContent = formatTimeLabel(yVal);
+        svg.appendChild(text);
       }
-      text.setAttribute("font-size", "10px");
-      text.setAttribute("font-family", "JetBrains Mono, monospace");
-      text.textContent = formatTimeLabel(yVal);
-      svg.appendChild(text);
     }
 
     // Draw X-axis frame markers
@@ -443,47 +477,41 @@ export function drawChartSVG(
   });
 }
 
-// Helper to get nice max/min for log scale (1-2.5-5-7.5 sequence)
-export function getNiceLogMax(val: number): number {
-  if (val <= 0) return 0.1;
-  const exponent = Math.floor(Math.log10(val));
-  const base = Math.pow(10, exponent);
-  const ratio = val / base;
-  
-  if (ratio <= 1.0) return base;
-  if (ratio <= 2.5) return base * 2.5;
-  if (ratio <= 5.0) return base * 5;
-  if (ratio <= 7.5) return base * 7.5;
-  return base * 10;
-}
-
-export function getNiceLogMin(val: number): number {
-  if (val <= 0) return 0.0001;
-  const exponent = Math.floor(Math.log10(val));
-  const base = Math.pow(10, exponent);
-  const ratio = val / base;
-  
-  if (ratio >= 7.5) return base * 7.5;
-  if (ratio >= 5.0) return base * 5;
-  if (ratio >= 2.5) return base * 2.5;
-  return base;
-}
-
 export function getLogGridValues(minY: number, chartMax: number): number[] {
-  const values: number[] = [];
+  const rangeRatio = chartMax / minY;
+
+  if (rangeRatio <= 10.0) {
+    // Narrow range magnitude step rule: Round span/10 to the nearest power of 10
+    const span = chartMax - minY;
+    const exponent = Math.round(Math.log10(span / 10));
+    const step = Math.pow(10, exponent);
+
+    const gridValues: number[] = [];
+    const start = Math.ceil(minY / step) * step;
+    const end = Math.floor(chartMax / step) * step;
+    for (let val = start; val <= end + step * 0.001; val += step) {
+      gridValues.push(Math.round(val * 1e9) / 1e9);
+    }
+    return gridValues;
+  }
+
+  // Wide range: include all 9 subdivisions of each decade
+  const gridValues: number[] = [];
   const startDecade = Math.floor(Math.log10(minY));
   const endDecade = Math.ceil(Math.log10(chartMax));
-  
+
   for (let d = startDecade; d <= endDecade; d++) {
     const base = Math.pow(10, d);
-    for (const mult of [1, 2.5, 5, 7.5]) {
-      const val = base * mult;
+    for (let mult = 1; mult <= 9; mult++) {
+      const val = Math.round((base * mult) * 1e9) / 1e9;
       if (val >= minY * 0.999 && val <= chartMax * 1.001) {
-        if (values.length === 0 || values[values.length - 1] < val * 0.999) {
-          values.push(val);
+        if (gridValues.length === 0 || gridValues[gridValues.length - 1] < val * 0.999) {
+          gridValues.push(val);
         }
       }
     }
   }
-  return values;
+  return gridValues;
 }
+
+
