@@ -175,7 +175,7 @@ function generateToggles(activeSimulatorIds?: string[]) {
   });
 }
 
-function generateMetricCards() {
+function generateMetricCards(activeSimulatorIds?: string[]) {
   const container = document.querySelector('.metrics-grid')!;
   if (!container) return;
   
@@ -192,7 +192,8 @@ function generateMetricCards() {
     const card = document.createElement('div');
     card.className = `metric-card ${sim.id}-card`;
     card.id = `card-metric-${sim.id}`;
-    if (!sim.activeByDefault) {
+    const isActive = activeSimulatorIds ? activeSimulatorIds.includes(sim.id) : sim.activeByDefault;
+    if (!isActive) {
       card.classList.add('hidden');
     }
     card.innerHTML = `
@@ -219,7 +220,7 @@ function generateMetricCards() {
   });
 }
 
-function generateLegend() {
+function generateLegend(activeSimulatorIds?: string[]) {
   const container = document.querySelector('.chart-legend')!;
   if (!container) return;
   container.innerHTML = '';
@@ -227,7 +228,8 @@ function generateLegend() {
     const item = document.createElement('span');
     item.className = 'legend-item';
     item.id = `legend-item-${sim.id}`;
-    if (!sim.activeByDefault) {
+    const isActive = activeSimulatorIds ? activeSimulatorIds.includes(sim.id) : sim.activeByDefault;
+    if (!isActive) {
       item.classList.add('hidden');
     }
     item.innerHTML = `<span class="legend-color" style="background-color: ${sim.color}"></span>${sim.name}`;
@@ -235,7 +237,7 @@ function generateLegend() {
   });
 }
 
-function generateCanvases() {
+function generateCanvases(activeSimulatorIds?: string[]) {
   const container = document.querySelector('.visualizer-grid')!;
   if (!container) return;
   container.innerHTML = '';
@@ -243,7 +245,8 @@ function generateCanvases() {
     const card = document.createElement('div');
     card.className = 'canvas-card';
     card.id = `card-canvas-${sim.id}`;
-    if (!sim.activeByDefault) {
+    const isActive = activeSimulatorIds ? activeSimulatorIds.includes(sim.id) : sim.activeByDefault;
+    if (!isActive) {
       card.classList.add('hidden');
     }
     card.innerHTML = `
@@ -262,9 +265,9 @@ function generateCanvases() {
 export function initUI(activeSimulatorIds?: string[]) {
   // Generate dynamic DOM structures
   generateToggles(activeSimulatorIds);
-  generateMetricCards();
-  generateLegend();
-  generateCanvases();
+  generateMetricCards(activeSimulatorIds);
+  generateLegend(activeSimulatorIds);
+  generateCanvases(activeSimulatorIds);
 
   toggleLogScale = document.getElementById('toggle-log-scale') as HTMLInputElement;
   toggleZeroBaseline = document.getElementById('toggle-zero-baseline') as HTMLInputElement;

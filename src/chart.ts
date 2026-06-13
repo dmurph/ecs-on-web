@@ -128,12 +128,15 @@ export function drawChartSVG(
 
   if (minTime !== Infinity && maxTime > 0) {
     if (useLogScale) {
-      const spanData = maxTime - minTime;
       let targetMaxVal: number;
       let targetMin: number;
 
       if (useZeroBaseline) {
-        targetMaxVal = maxTime * 1.15;
+        const rawTargetMax = maxTime * 1.15;
+        const exponent = Math.floor(Math.log10(rawTargetMax));
+        const base = Math.pow(10, exponent);
+        const mult = Math.ceil(rawTargetMax / base);
+        targetMaxVal = Math.round((base * mult) * 1e9) / 1e9;
         targetMin = targetMaxVal / 1000;
 
         if (currentChartMaxLogSym === -1 || currentChartMinLogSym === -1) {
@@ -150,12 +153,27 @@ export function drawChartSVG(
         chartMax = currentChartMaxLogSym;
         minY = currentChartMinLogSym;
       } else {
-        if (spanData === 0) {
-          targetMaxVal = maxTime * 1.15;
-          targetMin = maxTime * 0.85;
+        targetMin = minTime * 0.85;
+        const targetMax = maxTime * 1.15;
+        const rangeRatio = targetMax / targetMin;
+
+        if (rangeRatio <= 10.0) {
+          // Narrow range aligned to grid step size
+          const spanApprox = targetMax - targetMin;
+          const exponent = Math.round(Math.log10(spanApprox / 10));
+          const step = Math.pow(10, exponent);
+
+          targetMaxVal = Math.round((Math.ceil(targetMax / step) * step) * 1e9) / 1e9;
+          targetMin = Math.round((Math.max(Math.floor(targetMin / step) * step, targetMaxVal / 1000)) * 1e9) / 1e9;
         } else {
-          targetMaxVal = maxTime + 0.15 * spanData;
-          targetMin = Math.max(minTime - 0.15 * spanData, minTime * 0.85, targetMaxVal / 1000);
+          // Wide range aligned to decade subdivisions
+          const expMin = Math.floor(Math.log10(targetMin));
+          const baseMin = Math.pow(10, expMin);
+          targetMin = Math.round((Math.floor(targetMin / baseMin) * baseMin) * 1e9) / 1e9;
+
+          const expMax = Math.floor(Math.log10(targetMax));
+          const baseMax = Math.pow(10, expMax);
+          targetMaxVal = Math.round((Math.ceil(targetMax / baseMax) * baseMax) * 1e9) / 1e9;
         }
 
         if (currentChartMaxLogPure === -1 || currentChartMinLogPure === -1) {
