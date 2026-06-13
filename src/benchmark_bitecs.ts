@@ -4,10 +4,60 @@ import { ENTITY_COLORS, ENTITY_MAX_SPEED } from './config';
 import type { Simulator, EntityState } from './simulator';
 import { renderCanvas } from './renderer';
 import {
-  insertionSortBitecs,
-  quickSortBitecs,
-  mergeSortBitecs
+  insertionSortCustomECS,
+  quickSortCustomECS
 } from './sorting';
+
+// Helper: Insertion sort over a range for subarrays
+function insertionSortRangeBitecs(entities: Int32Array, posX: Float64Array, left: number, right: number) {
+  for (let i = left + 1; i <= right; i++) {
+    const currIdx = entities[i];
+    const currX = posX[currIdx];
+    let j = i - 1;
+    while (j >= left && posX[entities[j]] > currX) {
+      entities[j + 1] = entities[j];
+      j--;
+    }
+    entities[j + 1] = currIdx;
+  }
+}
+
+export function mergeSortBitecs(entities: Int32Array, posX: Float64Array, temp: Int32Array, left: number, right: number) {
+  temp.set(entities);
+  mergeSortBitecsRec(temp, entities, posX, left, right);
+}
+
+function mergeSortBitecsRec(src: Int32Array, dst: Int32Array, posX: Float64Array, left: number, right: number) {
+  if (right - left < 12) {
+    insertionSortRangeBitecs(dst, posX, left, right);
+    for (let m = left; m <= right; m++) {
+      src[m] = dst[m];
+    }
+    return;
+  }
+  const mid = (left + right) >> 1;
+  mergeSortBitecsRec(dst, src, posX, left, mid);
+  mergeSortBitecsRec(dst, src, posX, mid + 1, right);
+  
+  let i = left;
+  let j = mid + 1;
+  let k = left;
+
+  while (i <= mid && j <= right) {
+    if (posX[src[i]] <= posX[src[j]]) {
+      dst[k++] = src[i++];
+    } else {
+      dst[k++] = src[j++];
+    }
+  }
+
+  while (i <= mid) {
+    dst[k++] = src[i++];
+  }
+  while (j <= right) {
+    dst[k++] = src[j++];
+  }
+}
 
 // 1. Component Definitions
 export const PositionX = { value: new Float64Array(100000) };
@@ -64,9 +114,9 @@ export function runBroadphase(
 
   // 1. Sort entities based on chosen algorithm
   if (sortType === 'insertion') {
-    insertionSortBitecs(entities, PositionX.value);
+    insertionSortCustomECS(entities, PositionX.value);
   } else if (sortType === 'quick') {
-    quickSortBitecs(entities, PositionX.value, 0, len - 1);
+    quickSortCustomECS(entities, PositionX.value, 0, len - 1);
   } else if (sortType === 'merge' && tempEntities) {
     mergeSortBitecs(entities, PositionX.value, tempEntities, 0, len - 1);
   } else if (sortType === 'native') {
