@@ -684,8 +684,12 @@ canvas {
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 12px 16px;
-  flex: 1 1 350px;
+  flex: 2 1 450px;
   box-sizing: border-box;
+}
+
+.toggle-section:nth-child(2) {
+  flex: 1 1 250px;
 }
 
 .toggle-section-header {
@@ -714,8 +718,15 @@ canvas {
   border: 1px dashed rgba(15, 23, 42, 0.08);
   border-radius: 6px;
   padding: 10px 12px;
-  width: 100%;
   box-sizing: border-box;
+}
+
+.toggle-containers-list .toggle-container:first-child {
+  flex: 2 1 350px;
+}
+
+.toggle-containers-list .toggle-container:nth-child(2) {
+  flex: 1 1 180px;
 }
 
 .toggle-subgroups {
