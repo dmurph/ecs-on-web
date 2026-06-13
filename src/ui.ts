@@ -8,6 +8,7 @@ export interface UICallbacks {
   onReset: () => void;
   onCopy: () => void;
   onToggleSimulator?: (id: string, active: boolean) => void;
+  onToggleMultipleSimulators?: (toggles: { id: string; active: boolean }[]) => void;
   onToggleLogScale?: (active: boolean) => void;
   onToggleZeroBaseline?: (active: boolean) => void;
   onBaselineChange?: (id: string) => void;
@@ -352,6 +353,49 @@ export function setupUIListeners(callbacks: UICallbacks) {
       handleToggle(sim.id, cb);
     }
   });
+
+  const btnSelectAll = document.getElementById('btn-select-all');
+  const btnSelectNone = document.getElementById('btn-select-none');
+
+  if (btnSelectAll && btnSelectNone) {
+    btnSelectAll.addEventListener('click', () => {
+      const updates: { id: string; active: boolean }[] = [];
+      SIMULATOR_REGISTRY.forEach(sim => {
+        const cb = toggles[sim.id];
+        if (cb && !cb.checked) {
+          cb.checked = true;
+          toggleCardVisibility(sim.id, true);
+          updates.push({ id: sim.id, active: true });
+        }
+      });
+      if (updates.length > 0) {
+        if (callbacks.onToggleMultipleSimulators) {
+          callbacks.onToggleMultipleSimulators(updates);
+        } else {
+          updates.forEach(u => callbacks.onToggleSimulator?.(u.id, u.active));
+        }
+      }
+    });
+
+    btnSelectNone.addEventListener('click', () => {
+      const updates: { id: string; active: boolean }[] = [];
+      SIMULATOR_REGISTRY.forEach(sim => {
+        const cb = toggles[sim.id];
+        if (cb && cb.checked) {
+          cb.checked = false;
+          toggleCardVisibility(sim.id, false);
+          updates.push({ id: sim.id, active: false });
+        }
+      });
+      if (updates.length > 0) {
+        if (callbacks.onToggleMultipleSimulators) {
+          callbacks.onToggleMultipleSimulators(updates);
+        } else {
+          updates.forEach(u => callbacks.onToggleSimulator?.(u.id, u.active));
+        }
+      }
+    });
+  }
 
   toggleLogScale.addEventListener('change', () => {
     callbacks.onToggleLogScale?.(toggleLogScale.checked);

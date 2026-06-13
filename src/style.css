@@ -632,10 +632,40 @@ canvas {
   box-sizing: border-box;
 }
 
+.toggle-header-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
 .toggle-title {
   font-weight: 600;
   font-size: 0.9rem;
   color: var(--color-text-primary);
+}
+
+.toggle-shortcuts {
+  display: flex;
+  gap: 8px;
+}
+
+.shortcut-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-accent);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.shortcut-link:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
 }
 
 .toggle-group {

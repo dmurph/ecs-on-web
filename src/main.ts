@@ -421,6 +421,36 @@ setupUIListeners({
 
     resetBenchmark();
   },
+  onToggleMultipleSimulators: (updates) => {
+    updates.forEach(({ id, active }) => {
+      const sim = simulators.find(s => s.id === id)!;
+      if (active) {
+        if (!activeSimulators.includes(sim)) {
+          activeSimulators.push(sim);
+        }
+      } else {
+        activeSimulators = activeSimulators.filter(s => s !== sim);
+      }
+    });
+    activeSimulators.sort((a, b) => simulators.indexOf(a) - simulators.indexOf(b));
+
+    const activeIds = activeSimulators.map(s => s.id);
+    try {
+      localStorage.setItem('ecs-benchmark-active-simulators', JSON.stringify(activeIds));
+    } catch (e) {}
+
+    // Handle baseline change if current baseline was deactivated
+    if (!activeIds.includes(baselineSimulatorId)) {
+      if (activeIds.length > 0) {
+        baselineSimulatorId = activeIds[0];
+      } else {
+        baselineSimulatorId = '';
+      }
+    }
+    updateBaselineOptions(activeIds, baselineSimulatorId);
+
+    resetBenchmark();
+  },
   onToggleLogScale: (active) => {
     useLogScale = active;
     drawChart();
