@@ -7,7 +7,8 @@
     "asbuild": "asc assembly/index.ts -o public/benchmark_wasm_ecs.wasm -O --noAssert",
     "dev": "npm run asbuild && vite",
     "build": "npm run asbuild && tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "benchmark": "npm run asbuild && npx tsx scripts/run_benchmarks.ts"
   },
   "devDependencies": {
     "assemblyscript": "^0.28.18",
