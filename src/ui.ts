@@ -225,8 +225,9 @@ function generateLegend(activeSimulatorIds?: string[]) {
 }
 
 function generateCanvases(activeSimulatorIds?: string[]) {
-  const container = document.querySelector('.visualizer-grid')!;
+  const container = document.querySelector('.visualizer-grid') as HTMLElement;
   if (!container) return;
+  container.style.minHeight = '';
   container.replaceChildren();
 
   SIMULATOR_REGISTRY.forEach(sim => {
@@ -358,10 +359,9 @@ export function setupUIListeners(callbacks: UICallbacks) {
   if (btnToggleVisualizer) {
     let isVisualizerVisible = false; // Default to not showing
     try {
-      const stored = localStorage.getItem('ecs-benchmark-visualizer-visible');
-      if (stored !== null) {
-        isVisualizerVisible = JSON.parse(stored);
-      }
+      const hash = window.location.hash;
+      const query = window.location.search;
+      isVisualizerVisible = hash.includes('vis=expanded') || hash.includes('vis=true') || query.includes('vis=true');
     } catch (e) {}
 
     const grid = document.querySelector('.visualizer-grid');
@@ -371,7 +371,8 @@ export function setupUIListeners(callbacks: UICallbacks) {
     btnToggleVisualizer.addEventListener('click', () => {
       isVisualizerVisible = !isVisualizerVisible;
       try {
-        localStorage.setItem('ecs-benchmark-visualizer-visible', JSON.stringify(isVisualizerVisible));
+        const hashStr = isVisualizerVisible ? '#vis=expanded' : '';
+        history.replaceState(null, '', window.location.pathname + window.location.search + hashStr);
       } catch (e) {}
       btnToggleVisualizer.textContent = isVisualizerVisible ? 'Hide Visualizations' : 'Show Visualizations';
       if (grid) {

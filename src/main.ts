@@ -127,6 +127,20 @@ setupResizeListener(() => {
 runner.resetBenchmark();
 updateUI(runner.numEntities, runner.speedMultiplier, runner.benchmarkLength);
 
+// === SCROLL RESTORATION ===
+window.addEventListener('beforeunload', () => {
+  try {
+    sessionStorage.setItem('ecs-benchmark-scroll-y', window.scrollY.toString());
+  } catch (e) {}
+});
+
+try {
+  const savedScrollY = sessionStorage.getItem('ecs-benchmark-scroll-y');
+  if (savedScrollY !== null) {
+    window.scrollTo(0, parseInt(savedScrollY, 10));
+  }
+} catch (e) {}
+
 // Handle embed mode (hiding header, footer, etc.)
 const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.has('embed')) {

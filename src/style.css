@@ -235,6 +235,7 @@ input[type="range"] {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  min-height: 180px;
 }
 
 .metric-card {

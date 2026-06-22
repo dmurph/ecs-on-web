@@ -200,9 +200,17 @@
             Show Visualizations
           </button>
         </div>
-        <div class="visualizer-grid hidden">
+        <div class="visualizer-grid hidden" id="visualizer-grid">
           <!-- Dynamic visualizer canvases will be injected here -->
         </div>
+        <script>
+          if (window.location.hash.includes('vis=expanded') || window.location.search.includes('vis=true')) {
+            var g = document.getElementById('visualizer-grid');
+            var b = document.getElementById('btn-toggle-visualizer');
+            if (g) { g.classList.remove('hidden'); g.style.minHeight = '2750px'; }
+            if (b) b.textContent = 'Hide Visualizations';
+          }
+        </script>
       </section>
 
       <!-- 5. Article Section -->
