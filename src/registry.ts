@@ -1,10 +1,10 @@
 import type { Simulator } from './simulator';
-import { OOPSimulator } from './benchmark_oop';
-import { OOPTreeSimulator } from './benchmark_oop_tree';
-import { CustomECSSimulator } from './benchmark_custom_ecs';
-import { ECSTreeSimulator } from './benchmark_ecs_tree';
-import { WasmECSSimulator } from './benchmark_wasm_ecs';
-import { WasmTreeSimulator } from './benchmark_wasm_tree';
+import { OOPSimulator } from './benchmarks/benchmark_oop';
+import { OOPTreeSimulator } from './benchmarks/benchmark_oop_tree';
+import { CustomECSSimulator } from './benchmarks/benchmark_custom_ecs';
+import { ECSTreeSimulator } from './benchmarks/benchmark_ecs_tree';
+import { WasmECSSimulator } from './benchmarks/benchmark_wasm_ecs';
+import { WasmTreeSimulator } from './benchmarks/benchmark_wasm_tree';
 import { SortMethod } from './config';
 
 export interface SimulatorConfig {

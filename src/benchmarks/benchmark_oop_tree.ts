@@ -1,8 +1,8 @@
 import { GameEntity } from './benchmark_oop';
-import { SeededPRNG } from './prng';
-import type { Simulator, EntityState } from './simulator';
-import { renderCanvas } from './renderer';
-import { ENTITY_MAX_SPEED, TREE_REBALANCE_FRAME_INTERVAL, TREE_REBALANCE_PERCENTAGE } from './config';
+import { SeededPRNG } from '../prng';
+import type { Simulator, EntityState } from '../simulator';
+import { renderCanvas } from '../renderer';
+import { ENTITY_MAX_SPEED, TREE_REBALANCE_FRAME_INTERVAL, TREE_REBALANCE_PERCENTAGE } from '../config';
 export let debugRotations = false;
 export function setDebugRotations(val: boolean) {
   debugRotations = val;

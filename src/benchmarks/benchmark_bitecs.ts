@@ -1,12 +1,12 @@
 import { addEntity, addComponent, createWorld } from 'bitecs';
-import { SeededPRNG } from './prng';
-import { ENTITY_COLORS, ENTITY_MAX_SPEED } from './config';
-import type { Simulator, EntityState } from './simulator';
-import { renderCanvas } from './renderer';
+import { SeededPRNG } from '../prng';
+import { ENTITY_COLORS, ENTITY_MAX_SPEED } from '../config';
+import type { Simulator, EntityState } from '../simulator';
+import { renderCanvas } from '../renderer';
 import {
   insertionSortCustomECS,
   quickSortCustomECS
-} from './sorting';
+} from '../sorting';
 
 // Helper: Insertion sort over a range for subarrays
 function insertionSortRangeBitecs(entities: Int32Array, posX: Float64Array, left: number, right: number) {

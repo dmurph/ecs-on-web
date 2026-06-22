@@ -1,7 +1,7 @@
 import { createWorld } from 'bitecs';
 import { ENTITY_COLORS } from './src/config';
-import { GameEntity, runOOPBroadphase, resolveOOPPhysics, updateOOPMovement } from './src/benchmark_oop';
-import { createECSData, runECSBroadphase, resolveECSPhysics, updateECSMovement } from './src/benchmark_custom_ecs';
+import { GameEntity, runOOPBroadphase, resolveOOPPhysics, updateOOPMovement } from './src/benchmarks/benchmark_oop';
+import { createECSData, runECSBroadphase, resolveECSPhysics, updateECSMovement } from './src/benchmarks/benchmark_custom_ecs';
 import {
   PositionX,
   PositionYwh,
@@ -11,7 +11,7 @@ import {
   runBitecsBroadphase,
   resolveBitecsPhysics,
   updateBitecsMovement
-} from './src/benchmark_bitecs';
+} from './src/benchmarks/benchmark_bitecs';
 import {
   AABBTree,
   TreeNode,
@@ -20,7 +20,7 @@ import {
   runOOPTreeBroadphase,
   updateOOPTreeMovement,
   resolveOOPTreePhysics
-} from './src/benchmark_oop_tree';
+} from './src/benchmarks/benchmark_oop_tree';
 import { SeededPRNG } from './src/prng';
 
 function runVerification() {

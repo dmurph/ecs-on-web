@@ -1,7 +1,7 @@
-import { ENTITY_COLORS, ENTITY_MAX_SPEED, TREE_REBALANCE_FRAME_INTERVAL, TREE_REBALANCE_PERCENTAGE } from './config';
-import { SeededPRNG } from './prng';
-import type { Simulator, EntityState } from './simulator';
-import { renderCanvas } from './renderer';
+import { ENTITY_COLORS, ENTITY_MAX_SPEED, TREE_REBALANCE_FRAME_INTERVAL, TREE_REBALANCE_PERCENTAGE } from '../config';
+import { SeededPRNG } from '../prng';
+import type { Simulator, EntityState } from '../simulator';
+import { renderCanvas } from '../renderer';
 import type { ECSData } from './benchmark_custom_ecs';
 export let debugRotations = false;
 export function setDebugRotations(val: boolean) {

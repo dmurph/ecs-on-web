@@ -1,7 +1,7 @@
-import { ENTITY_COLORS, SortMethod } from './config';
-import { SeededPRNG } from './prng';
-import type { Simulator, EntityState } from './simulator';
-import { renderCanvas } from './renderer';
+import { ENTITY_COLORS, SortMethod } from '../config';
+import { SeededPRNG } from '../prng';
+import type { Simulator, EntityState } from '../simulator';
+import { renderCanvas } from '../renderer';
 import type { ECSData } from './benchmark_custom_ecs';
 
 // Fetch and compile WebAssembly module synchronously/top-level await

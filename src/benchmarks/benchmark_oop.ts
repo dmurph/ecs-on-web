@@ -1,7 +1,7 @@
-import { ENTITY_COLORS, ENTITY_MAX_SPEED, SortMethod } from './config';
-import { SeededPRNG } from './prng';
-import type { Simulator, EntityState } from './simulator';
-import { renderCanvas } from './renderer';
+import { ENTITY_COLORS, ENTITY_MAX_SPEED, SortMethod } from '../config';
+import { SeededPRNG } from '../prng';
+import type { Simulator, EntityState } from '../simulator';
+import { renderCanvas } from '../renderer';
 
 // === INTERNAL SORTING ALGORITHMS ===
 function insertionSortRangeOOP(entities: GameEntity[], left: number, right: number) {

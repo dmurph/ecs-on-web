@@ -124,22 +124,22 @@ async function runBenchmarkForBehavior(numEntities: number, behavior: 'wander' |
 }
 
 async function start() {
-  const oopModule = await import('../src/benchmark_oop');
+  const oopModule = await import('../src/benchmarks/benchmark_oop');
   OOPSimulator = oopModule.OOPSimulator;
 
-  const oopTreeModule = await import('../src/benchmark_oop_tree');
+  const oopTreeModule = await import('../src/benchmarks/benchmark_oop_tree');
   OOPTreeSimulator = oopTreeModule.OOPTreeSimulator;
 
-  const customEcsModule = await import('../src/benchmark_custom_ecs');
+  const customEcsModule = await import('../src/benchmarks/benchmark_custom_ecs');
   CustomECSSimulator = customEcsModule.CustomECSSimulator;
 
-  const ecsTreeModule = await import('../src/benchmark_ecs_tree');
+  const ecsTreeModule = await import('../src/benchmarks/benchmark_ecs_tree');
   ECSTreeSimulator = ecsTreeModule.ECSTreeSimulator;
 
-  const bitecsModule = await import('../src/benchmark_bitecs');
+  const bitecsModule = await import('../src/benchmarks/benchmark_bitecs');
   BitECSSimulator = bitecsModule.BitECSSimulator;
 
-  const wasmEcsModule = await import('../src/benchmark_wasm_ecs');
+  const wasmEcsModule = await import('../src/benchmarks/benchmark_wasm_ecs');
   WasmECSSimulator = wasmEcsModule.WasmECSSimulator;
 
   const prngModule = await import('../src/prng');

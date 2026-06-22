@@ -1,7 +1,7 @@
 import { ENTITY_COLORS } from './config';
-import { GameEntity } from './benchmark_oop';
-import type { ECSData } from './benchmark_custom_ecs';
-import { PositionX, PositionYwh, Style } from './benchmark_bitecs';
+import { GameEntity } from './benchmarks/benchmark_oop';
+import type { ECSData } from './benchmarks/benchmark_custom_ecs';
+import { PositionX, PositionYwh, Style } from './benchmarks/benchmark_bitecs';
 
 interface RenderEntity {
   id: number;
