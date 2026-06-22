@@ -426,6 +426,8 @@ input[type="range"] {
 .svg-container {
   width: 100%;
   height: 250px;
+  margin-left: 5px;
+  margin-right: 5px;
 }
 
 /* 4. Output (Visualizer) Section */
@@ -434,6 +436,8 @@ input[type="range"] {
   justify-content: flex-start;
   gap: 15px;
   align-items: center;
+  margin-left: 5px;
+  margin-right: 5px;
   margin-bottom: 15px;
 }
 
