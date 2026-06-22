@@ -1,4 +1,4 @@
-import { ENTITY_COLORS, ENTITY_MAX_SPEED } from './config';
+import { ENTITY_COLORS, ENTITY_MAX_SPEED, TREE_REBALANCE_FRAME_INTERVAL, TREE_REBALANCE_PERCENTAGE } from './config';
 import { SeededPRNG } from './prng';
 import type { Simulator, EntityState } from './simulator';
 import { renderCanvas } from './renderer';
@@ -638,7 +638,7 @@ export function updateTree(
   entityLeaf: Int32Array,
   moveBuffer: Int32Array,
   moveCount: number,
-  frameCount: number,
+  movedFrameCount: number,
   prng?: SeededPRNG
 ) {
   const margin = 2.0; // Fat bounds margin
@@ -660,10 +660,10 @@ export function updateTree(
     tree.insertLeaf(leaf);
   }
 
-  // Optimize tree globally: re-insert 1% of nodes every 8 frames.
-  if (moveCount > 0 && frameCount % 8 === 0) {
+  // Optimize tree globally according to configuration intervals
+  if (moveCount > 0 && movedFrameCount % TREE_REBALANCE_FRAME_INTERVAL === 0) {
     const len = posX.length;
-    const numToOptimize = Math.max(10, Math.floor(len * 0.01));
+    const numToOptimize = Math.max(1, Math.floor(len * TREE_REBALANCE_PERCENTAGE));
     for (let k = 0; k < numToOptimize; k++) {
       const entityId = prng ? Math.floor(prng.next() * len) : Math.floor(Math.random() * len);
       const leaf = entityLeaf[entityId];
@@ -775,6 +775,7 @@ export class ECSTreeSimulator implements Simulator {
   private lastCollisionCount = 0;
   private pairsCount = 0;
   private frameCount = 0;
+  private movedFrameCount = 0;
 
   init(numEntities: number, _width: number, _height: number, _prng: SeededPRNG) {
     // 1. Spawns standard SoA component arrays
@@ -823,6 +824,7 @@ export class ECSTreeSimulator implements Simulator {
     this.lastCollisionCount = 0;
     this.pairsCount = 0;
     this.frameCount = 0;
+    this.movedFrameCount = 0;
   }
 
   update(width: number, height: number, speedMultiplier: number, behavior: string, prng: SeededPRNG): { time: number, collisionCount: number } {
@@ -851,6 +853,10 @@ export class ECSTreeSimulator implements Simulator {
         this.moveCount
       );
 
+      if (this.moveCount.count > 0) {
+        this.movedFrameCount++;
+      }
+
       // 2. Re-insert dirty leaves in flat tree
       updateTree(
         this.tree,
@@ -859,7 +865,7 @@ export class ECSTreeSimulator implements Simulator {
         this.entityLeaf,
         this.moveBuffer,
         this.moveCount.count,
-        this.frameCount,
+        this.movedFrameCount,
         prng
       );
 

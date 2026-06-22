@@ -2,7 +2,7 @@ import { GameEntity } from './benchmark_oop';
 import { SeededPRNG } from './prng';
 import type { Simulator, EntityState } from './simulator';
 import { renderCanvas } from './renderer';
-import { ENTITY_MAX_SPEED } from './config';
+import { ENTITY_MAX_SPEED, TREE_REBALANCE_FRAME_INTERVAL, TREE_REBALANCE_PERCENTAGE } from './config';
 export let debugRotations = false;
 export function setDebugRotations(val: boolean) {
   debugRotations = val;
@@ -337,7 +337,7 @@ export function updateTree(
   tree: AABBTree,
   entities: TreeGameEntity[],
   moveBuffer: TreeGameEntity[],
-  frameCount: number,
+  movedFrameCount: number,
   prng?: SeededPRNG
 ) {
   const numMoves = moveBuffer.length;
@@ -357,11 +357,10 @@ export function updateTree(
     tree.insertLeaf(leaf);
   }
 
-  // Incremental optimization: every 8 frames, randomly re-insert 1% of nodes
-  // to globally optimize the spatial tree structure.
-  if (numMoves > 0 && frameCount % 8 === 0) {
+  // Incremental optimization: rebalance according to configured intervals
+  if (numMoves > 0 && movedFrameCount % TREE_REBALANCE_FRAME_INTERVAL === 0) {
     const len = entities.length;
-    const numToOptimize = Math.max(10, Math.floor(len * 0.01));
+    const numToOptimize = Math.max(1, Math.floor(len * TREE_REBALANCE_PERCENTAGE));
     for (let k = 0; k < numToOptimize; k++) {
       const idx = prng ? Math.floor(prng.next() * len) : Math.floor(Math.random() * len);
       const leaf = entities[idx].leaf;
@@ -661,6 +660,7 @@ export class OOPTreeSimulator implements Simulator {
   private maxCollisions = 200000;
   private lastCollisionCount = 0;
   private frameCount = 0;
+  private movedFrameCount = 0;
 
   /**
    * Initializes entities and builds the dynamic AABB tree.
@@ -696,6 +696,7 @@ export class OOPTreeSimulator implements Simulator {
     this.moveBuffer = [];
     this.lastCollisionCount = 0;
     this.frameCount = 0;
+    this.movedFrameCount = 0;
   }
 
   /**
@@ -711,8 +712,12 @@ export class OOPTreeSimulator implements Simulator {
   update(width: number, height: number, speedMultiplier: number, behavior: string, prng: SeededPRNG): { time: number, collisionCount: number } {
     const start = performance.now();
     if (this.tree) {
+      this.moveBuffer = [];
       updateMovement(this.entities, width, height, speedMultiplier, behavior, prng, this.moveBuffer);
-      updateTree(this.tree, this.entities, this.moveBuffer, this.frameCount, prng);
+      if (this.moveBuffer.length > 0) {
+        this.movedFrameCount++;
+      }
+      updateTree(this.tree, this.entities, this.moveBuffer, this.movedFrameCount, prng);
       const pairsCount = runBroadphase(this.tree.root, this.pairsBuffer);
       
       this.colliding.fill(0);

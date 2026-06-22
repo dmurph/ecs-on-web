@@ -4,6 +4,7 @@ import { OOPTreeSimulator } from './benchmark_oop_tree';
 import { CustomECSSimulator } from './benchmark_custom_ecs';
 import { ECSTreeSimulator } from './benchmark_ecs_tree';
 import { WasmECSSimulator } from './benchmark_wasm_ecs';
+import { WasmTreeSimulator } from './benchmark_wasm_tree';
 import { SortMethod } from './config';
 
 export interface SimulatorConfig {
@@ -105,6 +106,13 @@ export const SIMULATOR_REGISTRY: SimulatorConfig[] = [
     color: '#9d174d',
     activeByDefault: false,
     createInstance: () => new WasmECSSimulator(SortMethod.Merge)
+  },
+  {
+    id: 'wasm-tree',
+    name: 'WASM Tree',
+    color: '#a21caf',
+    activeByDefault: true,
+    createInstance: () => new WasmTreeSimulator()
   }
 ];
 

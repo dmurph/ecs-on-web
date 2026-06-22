@@ -16,6 +16,48 @@ export interface UICallbacks {
 
 import { SIMULATOR_REGISTRY } from './registry';
 
+export interface PresetConfig {
+  id: string;
+  name: string;
+  description: string;
+  simulatorIds: string[];
+}
+
+export const PRESETS: PresetConfig[] = [
+  {
+    id: 'h1',
+    name: 'H1: Tree vs S&P',
+    description: 'Hypothesis 1: Is an O(N log N) spatial tree always faster than O(N²) Sweep & Prune?',
+    simulatorIds: ['oop', 'ecs', 'oop-tree', 'ecs-tree', 'wasm-tree']
+  },
+  {
+    id: 'h2',
+    name: 'H2: Sorting Strategies',
+    description: 'Hypothesis 2: Is Insertion Sort optimal for mostly-sorted real-time physics data?',
+    simulatorIds: ['ecs', 'ecs-quick', 'ecs-merge', 'ecs-native']
+  },
+  {
+    id: 'h3',
+    name: 'H3: JS vs WASM',
+    description: 'Hypothesis 3: Is WebAssembly required to realize the memory locality gains of ECS?',
+    simulatorIds: ['ecs-merge', 'wasm-merge', 'ecs-tree', 'wasm-tree']
+  },
+  {
+    id: 'showdown',
+    name: '🏆 Finale: Titan Showdown',
+    description: 'Grand Finale: Pitting the reigning S&P Merge champions head-to-head against the fastest spatial trees.',
+    simulatorIds: ['oop-tree', 'ecs-tree', 'wasm-tree', 'ecs-merge', 'wasm-merge']
+  },
+  {
+    id: 'all',
+    name: 'All Simulators',
+    description: 'Sandbox Overview of all available spatial and collision detection benchmarks.',
+    simulatorIds: SIMULATOR_REGISTRY.map(s => s.id)
+  }
+];
+
+let currentPresetId = 'h1';
+
 // DOM Elements
 let statusPulse: HTMLElement;
 let statusText: HTMLElement;
@@ -50,128 +92,33 @@ const toggles: Record<string, HTMLInputElement> = {};
 let toggleLogScale: HTMLInputElement;
 let toggleZeroBaseline: HTMLInputElement;
 
-interface ContainerDefinition {
-  subgroups: {
-    title: string;
-    simulatorIds: string[];
-  }[];
-}
+function generatePresets(onSelectPreset: (preset: PresetConfig) => void) {
+  const container = document.getElementById('preset-buttons-container');
+  const descEl = document.getElementById('preset-desc-text');
+  if (!container || !descEl) return;
+  container.replaceChildren();
 
-interface GroupDefinition {
-  title: string;
-  containers: ContainerDefinition[];
-}
+  PRESETS.forEach(preset => {
+    const btn = document.createElement('button');
+    btn.className = `preset-btn ${preset.id === currentPresetId ? 'active' : ''}`;
+    btn.id = `btn-preset-${preset.id}`;
+    btn.setAttribute('role', 'tab');
+    btn.setAttribute('aria-selected', preset.id === currentPresetId ? 'true' : 'false');
+    btn.textContent = preset.name;
 
-const UI_GROUPS: GroupDefinition[] = [
-  {
-    title: 'JavaScript Simulators',
-    containers: [
-      {
-        subgroups: [
-          {
-            title: 'S&P (OOP):',
-            simulatorIds: ['oop', 'oop-quick', 'oop-merge', 'oop-native']
-          },
-          {
-            title: 'S&P (ECS):',
-            simulatorIds: ['ecs', 'ecs-quick', 'ecs-merge', 'ecs-native']
-          }
-        ]
-      },
-      {
-        subgroups: [
-          {
-            title: 'Spatial Tree:',
-            simulatorIds: ['oop-tree', 'ecs-tree']
-          }
-        ]
-      }
-    ]
-  },
-  {
-    title: 'WebAssembly Simulators',
-    containers: [
-      {
-        subgroups: [
-          {
-            title: 'S&P (WASM):',
-            simulatorIds: ['wasm', 'wasm-quick', 'wasm-merge']
-          }
-        ]
-      }
-    ]
-  }
-];
-
-function generateToggles(activeSimulatorIds?: string[]) {
-  const container = document.querySelector('.toggle-group')!;
-  if (!container) return;
-  container.innerHTML = '';
-
-  UI_GROUPS.forEach(group => {
-    const groupEl = document.createElement('div');
-    groupEl.className = 'toggle-section';
-
-    const header = document.createElement('div');
-    header.className = 'toggle-section-header';
-    header.textContent = group.title;
-    groupEl.appendChild(header);
-
-    const containersList = document.createElement('div');
-    containersList.className = 'toggle-containers-list';
-
-    group.containers.forEach(containerDef => {
-      const containerEl = document.createElement('div');
-      containerEl.className = 'toggle-container';
-
-      containerDef.subgroups.forEach(sub => {
-        const subgroupEl = document.createElement('div');
-        subgroupEl.className = 'toggle-subgroup';
-
-        const subTitle = document.createElement('span');
-        subTitle.className = 'subgroup-title';
-        subTitle.textContent = sub.title;
-        subgroupEl.appendChild(subTitle);
-
-        const togglesContainer = document.createElement('div');
-        togglesContainer.className = 'subgroup-toggles';
-
-        sub.simulatorIds.forEach(simId => {
-          const sim = SIMULATOR_REGISTRY.find(s => s.id === simId);
-          if (sim) {
-            const label = document.createElement('label');
-            label.className = 'toggle-label';
-            
-            let displayName = sim.name;
-            if (sim.id.startsWith('oop-') && sim.id !== 'oop-tree') {
-              displayName = sim.name.replace('OOP S&P (', '').replace(')', '');
-            } else if (sim.id === 'oop') {
-              displayName = 'Insertion';
-            } else if (sim.id.startsWith('ecs-') && sim.id !== 'ecs-tree') {
-              displayName = sim.name.replace('ECS S&P (', '').replace(')', '');
-            } else if (sim.id === 'ecs') {
-              displayName = 'Insertion';
-            } else if (sim.id.startsWith('wasm-')) {
-              displayName = sim.name.replace('WASM ECS S&P (', '').replace(')', '');
-            } else if (sim.id === 'wasm') {
-              displayName = 'Insertion';
-            }
-
-            const isChecked = activeSimulatorIds ? activeSimulatorIds.includes(sim.id) : sim.activeByDefault;
-            label.innerHTML = `<input type="checkbox" id="toggle-${sim.id}" ${isChecked ? 'checked' : ''} /><span class="toggle-color-square" style="background-color: ${sim.color}"></span>${displayName}`;
-            togglesContainer.appendChild(label);
-          }
-        });
-
-        subgroupEl.appendChild(togglesContainer);
-        containerEl.appendChild(subgroupEl);
+    btn.addEventListener('click', () => {
+      currentPresetId = preset.id;
+      descEl.textContent = preset.description;
+      container.querySelectorAll('.preset-btn').forEach(b => {
+        b.classList.remove('active');
+        b.setAttribute('aria-selected', 'false');
       });
-
-      containersList.appendChild(containerEl);
+      btn.classList.add('active');
+      btn.setAttribute('aria-selected', 'true');
+      onSelectPreset(preset);
     });
 
-    groupEl.appendChild(containersList);
-    container.appendChild(groupEl);
+    container.appendChild(btn);
   });
 }
 
@@ -179,7 +126,6 @@ function generateMetricCards(activeSimulatorIds?: string[]) {
   const container = document.querySelector('.metrics-grid')!;
   if (!container) return;
   
-  // Remove all cards that are not the speedup-card
   const cards = container.querySelectorAll('.metric-card');
   cards.forEach(card => {
     if (!card.classList.contains('speedup-card')) {
@@ -196,26 +142,59 @@ function generateMetricCards(activeSimulatorIds?: string[]) {
     if (!isActive) {
       card.classList.add('hidden');
     }
-    card.innerHTML = `
-      <div class="card-header-simple">
-        <h3>${sim.name}</h3>
-        <span class="legend-dot" style="background-color: ${sim.color}"></span>
-      </div>
-      <div class="metric-values">
-        <div class="metric-item">
-          <span class="metric-label">Current</span>
-          <span class="metric-value font-mono" id="${sim.id}-current-time" style="color: ${sim.color}">0.00 ms</span>
-        </div>
-        <div class="metric-item">
-          <span class="metric-label">Average</span>
-          <span class="metric-value font-mono" id="${sim.id}-avg-time" style="color: ${sim.color}">0.00 ms</span>
-        </div>
-        <div class="metric-item">
-          <span class="metric-label">99th %</span>
-          <span class="metric-value font-mono" id="${sim.id}-p99-time" style="color: ${sim.color}">0.00 ms</span>
-        </div>
-      </div>
-    `;
+
+    const header = document.createElement('div');
+    header.className = 'card-header-simple';
+
+    const leftGroup = document.createElement('div');
+    leftGroup.style.display = 'flex';
+    leftGroup.style.alignItems = 'center';
+    leftGroup.style.gap = '8px';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.id = `toggle-${sim.id}`;
+    checkbox.checked = isActive;
+    leftGroup.appendChild(checkbox);
+
+    const h3 = document.createElement('h3');
+    h3.textContent = sim.name;
+    leftGroup.appendChild(h3);
+
+    header.appendChild(leftGroup);
+
+    const dot = document.createElement('span');
+    dot.className = 'legend-dot';
+    dot.style.backgroundColor = sim.color;
+    header.appendChild(dot);
+    card.appendChild(header);
+
+    const valuesDiv = document.createElement('div');
+    valuesDiv.className = 'metric-values';
+
+    const items = [
+      { label: 'Current', id: `${sim.id}-current-time` },
+      { label: 'Average', id: `${sim.id}-avg-time` },
+      { label: '99th %', id: `${sim.id}-p99-time` }
+    ];
+
+    items.forEach(({ label, id }) => {
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'metric-item';
+      const lbl = document.createElement('span');
+      lbl.className = 'metric-label';
+      lbl.textContent = label;
+      const val = document.createElement('span');
+      val.className = 'metric-value font-mono';
+      val.id = id;
+      val.style.color = sim.color;
+      val.textContent = '0.00 ms';
+      itemDiv.appendChild(lbl);
+      itemDiv.appendChild(val);
+      valuesDiv.appendChild(itemDiv);
+    });
+
+    card.appendChild(valuesDiv);
     container.insertBefore(card, speedupCard);
   });
 }
@@ -223,7 +202,8 @@ function generateMetricCards(activeSimulatorIds?: string[]) {
 function generateLegend(activeSimulatorIds?: string[]) {
   const container = document.querySelector('.chart-legend')!;
   if (!container) return;
-  container.innerHTML = '';
+  container.replaceChildren();
+
   SIMULATOR_REGISTRY.forEach(sim => {
     const item = document.createElement('span');
     item.className = 'legend-item';
@@ -232,7 +212,13 @@ function generateLegend(activeSimulatorIds?: string[]) {
     if (!isActive) {
       item.classList.add('hidden');
     }
-    item.innerHTML = `<span class="legend-color" style="background-color: ${sim.color}"></span>${sim.name}`;
+
+    const colorSpan = document.createElement('span');
+    colorSpan.className = 'legend-color';
+    colorSpan.style.backgroundColor = sim.color;
+
+    item.appendChild(colorSpan);
+    item.appendChild(document.createTextNode(sim.name));
     container.appendChild(item);
   });
 }
@@ -240,7 +226,8 @@ function generateLegend(activeSimulatorIds?: string[]) {
 function generateCanvases(activeSimulatorIds?: string[]) {
   const container = document.querySelector('.visualizer-grid')!;
   if (!container) return;
-  container.innerHTML = '';
+  container.replaceChildren();
+
   SIMULATOR_REGISTRY.forEach(sim => {
     const card = document.createElement('div');
     card.className = 'canvas-card';
@@ -249,25 +236,54 @@ function generateCanvases(activeSimulatorIds?: string[]) {
     if (!isActive) {
       card.classList.add('hidden');
     }
-    card.innerHTML = `
-      <div class="canvas-header">
-        <h3>${sim.name}</h3>
-        <span class="render-fps" id="${sim.id}-fps">0 FPS</span>
-      </div>
-      <div class="canvas-container">
-        <canvas id="canvas-${sim.id}" width="1000" height="800"></canvas>
-      </div>
-    `;
+
+    const header = document.createElement('div');
+    header.className = 'canvas-header';
+
+    const headerLeft = document.createElement('div');
+    headerLeft.className = 'canvas-header-left';
+
+    const colorSquare = document.createElement('span');
+    colorSquare.className = 'toggle-color-square';
+    colorSquare.style.backgroundColor = sim.color;
+    headerLeft.appendChild(colorSquare);
+
+    const title = document.createElement('h3');
+    title.textContent = sim.name;
+    headerLeft.appendChild(title);
+
+    header.appendChild(headerLeft);
+
+    const fpsSpan = document.createElement('span');
+    fpsSpan.className = 'render-fps';
+    fpsSpan.id = `${sim.id}-fps`;
+    fpsSpan.textContent = '0 FPS';
+    header.appendChild(fpsSpan);
+
+    card.appendChild(header);
+
+    const canvasContainer = document.createElement('div');
+    canvasContainer.className = 'canvas-container';
+
+    const canvas = document.createElement('canvas');
+    canvas.id = `canvas-${sim.id}`;
+    canvas.width = 1000;
+    canvas.height = 800;
+    canvasContainer.appendChild(canvas);
+
+    card.appendChild(canvasContainer);
     container.appendChild(card);
   });
 }
 
 export function initUI(activeSimulatorIds?: string[]) {
-  // Generate dynamic DOM structures
-  generateToggles(activeSimulatorIds);
-  generateMetricCards(activeSimulatorIds);
-  generateLegend(activeSimulatorIds);
-  generateCanvases(activeSimulatorIds);
+  const activeIds = activeSimulatorIds ?? SIMULATOR_REGISTRY.filter(s => s.activeByDefault).map(s => s.id);
+  const match = PRESETS.find(p => p.simulatorIds.length === activeIds.length && p.simulatorIds.every(id => activeIds.includes(id)));
+  currentPresetId = match ? match.id : 'all';
+
+  generateMetricCards(activeIds);
+  generateLegend(activeIds);
+  generateCanvases(activeIds);
 
   toggleLogScale = document.getElementById('toggle-log-scale') as HTMLInputElement;
   toggleZeroBaseline = document.getElementById('toggle-zero-baseline') as HTMLInputElement;
@@ -294,7 +310,6 @@ export function initUI(activeSimulatorIds?: string[]) {
   chartFrameIndexEl = document.getElementById('chart-frame-index')!;
   chartFrameTotalEl = document.getElementById('chart-frame-total')!;
 
-  // Fill simulator maps
   SIMULATOR_REGISTRY.forEach(sim => {
     toggles[sim.id] = document.getElementById(`toggle-${sim.id}`) as HTMLInputElement;
     currentTimeEls[sim.id] = document.getElementById(`${sim.id}-current-time`)!;
@@ -345,7 +360,12 @@ export function setupUIListeners(callbacks: UICallbacks) {
   const handleToggle = (id: string, checkbox: HTMLInputElement) => {
     checkbox.addEventListener('change', () => {
       const active = checkbox.checked;
-      toggleCardVisibility(id, active);
+      currentPresetId = '';
+      document.querySelectorAll('.preset-btn').forEach(b => {
+        b.classList.remove('active');
+        b.setAttribute('aria-selected', 'false');
+      });
+      updateCardActiveState(id, active);
       callbacks.onToggleSimulator?.(id, active);
     });
   };
@@ -357,46 +377,59 @@ export function setupUIListeners(callbacks: UICallbacks) {
     }
   });
 
+  generatePresets((preset) => {
+    const updates = SIMULATOR_REGISTRY.map(sim => ({
+      id: sim.id,
+      active: preset.simulatorIds.includes(sim.id)
+    }));
+
+    updates.forEach(({ id, active }) => {
+      const cb = toggles[id];
+      if (cb) cb.checked = active;
+      toggleCardVisibility(id, active);
+    });
+
+    if (callbacks.onToggleMultipleSimulators) {
+      callbacks.onToggleMultipleSimulators(updates);
+    }
+  });
+
   const btnSelectAll = document.getElementById('btn-select-all');
   const btnSelectNone = document.getElementById('btn-select-none');
 
   if (btnSelectAll && btnSelectNone) {
     btnSelectAll.addEventListener('click', () => {
-      const updates: { id: string; active: boolean }[] = [];
-      SIMULATOR_REGISTRY.forEach(sim => {
-        const cb = toggles[sim.id];
-        if (cb && !cb.checked) {
-          cb.checked = true;
-          toggleCardVisibility(sim.id, true);
-          updates.push({ id: sim.id, active: true });
-        }
+      currentPresetId = 'all';
+      const descEl = document.getElementById('preset-desc-text');
+      if (descEl) descEl.textContent = PRESETS[0].description;
+      document.querySelectorAll('.preset-btn').forEach(b => {
+        b.classList.toggle('active', b.id === 'btn-preset-all');
+        b.setAttribute('aria-selected', b.id === 'btn-preset-all' ? 'true' : 'false');
       });
-      if (updates.length > 0) {
-        if (callbacks.onToggleMultipleSimulators) {
-          callbacks.onToggleMultipleSimulators(updates);
-        } else {
-          updates.forEach(u => callbacks.onToggleSimulator?.(u.id, u.active));
-        }
-      }
+
+      const updates = SIMULATOR_REGISTRY.map(sim => ({ id: sim.id, active: true }));
+      updates.forEach(({ id }) => {
+        const cb = toggles[id];
+        if (cb) cb.checked = true;
+        toggleCardVisibility(id, true);
+      });
+      callbacks.onToggleMultipleSimulators?.(updates);
     });
 
     btnSelectNone.addEventListener('click', () => {
-      const updates: { id: string; active: boolean }[] = [];
-      SIMULATOR_REGISTRY.forEach(sim => {
-        const cb = toggles[sim.id];
-        if (cb && cb.checked) {
-          cb.checked = false;
-          toggleCardVisibility(sim.id, false);
-          updates.push({ id: sim.id, active: false });
-        }
+      currentPresetId = '';
+      document.querySelectorAll('.preset-btn').forEach(b => {
+        b.classList.remove('active');
+        b.setAttribute('aria-selected', 'false');
       });
-      if (updates.length > 0) {
-        if (callbacks.onToggleMultipleSimulators) {
-          callbacks.onToggleMultipleSimulators(updates);
-        } else {
-          updates.forEach(u => callbacks.onToggleSimulator?.(u.id, u.active));
-        }
-      }
+
+      const updates = SIMULATOR_REGISTRY.map(sim => ({ id: sim.id, active: false }));
+      updates.forEach(({ id }) => {
+        const cb = toggles[id];
+        if (cb) cb.checked = false;
+        updateCardActiveState(id, false);
+      });
+      callbacks.onToggleMultipleSimulators?.(updates);
     });
   }
 
@@ -471,7 +504,6 @@ export function resetUIElements(
   btnPause.disabled = true;
   btnPause.textContent = 'Pause';
 
-  // Sync sliders to actual values
   entitySlider.value = defaultValues.entityCount.toString();
   speedSlider.value = defaultValues.speed.toString();
   lengthSlider.value = defaultValues.length.toString();
@@ -497,7 +529,6 @@ export function updateMetricsDisplay(data: {
     }
   });
 
-  // Calculate Averages
   const avg = (arr: number[]) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
   const averages: Record<string, number> = {};
   SIMULATOR_REGISTRY.forEach(sim => {
@@ -510,7 +541,6 @@ export function updateMetricsDisplay(data: {
     }
   });
 
-  // Calculate 99th Percentiles
   const p99 = (arr: number[], current: number) => {
     if (!arr.length) return current;
     const sorted = [...arr].sort((a, b) => a - b);
@@ -526,7 +556,6 @@ export function updateMetricsDisplay(data: {
     }
   });
 
-  // Calculate Speedups dynamically relative to baseline
   const baselineAvg = data.activeSimulators.includes(data.baselineSimulatorId)
     ? averages[data.baselineSimulatorId]
     : 0;
@@ -576,12 +605,20 @@ export function updateMetricsDisplay(data: {
   }
 }
 
+function setCopyIcon(success: boolean) {
+  const svgStr = success
+    ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="check-icon"><polyline points="20 6 9 17 4 12"></polyline></svg>`
+    : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+  const doc = new DOMParser().parseFromString(svgStr, 'image/svg+xml');
+  btnCopyResults.replaceChildren(doc.documentElement);
+}
+
 export function handleCopyFeedback(success: boolean) {
   if (success) {
-    btnCopyResults.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="check-icon"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+    setCopyIcon(true);
     btnCopyResults.classList.add('copied');
     setTimeout(() => {
-      btnCopyResults.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+      setCopyIcon(false);
       btnCopyResults.classList.remove('copied');
     }, 2000);
   }
@@ -620,14 +657,23 @@ export function setupResizeListener(onResize: () => void) {
   });
 }
 
+export function updateCardActiveState(id: string, active: boolean) {
+  const canvasCard = document.getElementById(`card-canvas-${id}`);
+  const metricCard = document.getElementById(`card-metric-${id}`);
+  if (canvasCard) canvasCard.classList.toggle('card-inactive', !active);
+  if (metricCard) metricCard.classList.toggle('card-inactive', !active);
+}
+
 export function toggleCardVisibility(id: string, visible: boolean) {
   const canvasCard = document.getElementById(`card-canvas-${id}`);
   const metricCard = document.getElementById(`card-metric-${id}`);
   if (canvasCard) {
     canvasCard.classList.toggle('hidden', !visible);
+    canvasCard.classList.remove('card-inactive');
   }
   if (metricCard) {
     metricCard.classList.toggle('hidden', !visible);
+    metricCard.classList.remove('card-inactive');
   }
   const legendItem = document.getElementById(`legend-item-${id}`);
   if (legendItem) {
@@ -680,4 +726,3 @@ export function renderInitialSpeedups(activeSims: string[], baselineId: string) 
     }
   }
 }
-

@@ -25,29 +25,26 @@
 
       <section class="section-intro">
         <p>
-          Can javascript actually take advantage of a high performance ECS
-          system? Where memory locality is optimized for quick loops? Or are the
-          inherit limitations of the v8 engine and javascript make this
-          impossible? And is WASM required for this optimization?
+          Can Javascript actually realize the hardware cache locality gains of Data-Oriented Entity Component Systems (ECS)? Or do heap allocations and V8 pointer indirections erode these benefits? And is WebAssembly (WASM) required to break through these performance ceilings?
         </p>
         <br />
         <p>
-          This benchmark attempts to discover if doing this architectures is
-          possible, and if so, if it is actually faster.
+          Explore this real-time benchmark suite comparing spatial trees against flat Sweep &amp; Prune algorithms across Javascript and WebAssembly.
         </p>
       </section>
 
-      <section class="section-simulators-toggle">
-        <div class="toggle-header-row">
-          <span class="toggle-title">Active Simulators:</span>
+      <section class="section-hypothesis-presets" aria-label="Research Focus Presets">
+        <div class="preset-header-row">
+          <span class="preset-title">Research Focus:</span>
+          <div class="preset-buttons" id="preset-buttons-container" role="tablist">
+            <!-- Dynamic preset buttons injected safely via JS -->
+          </div>
           <span class="toggle-shortcuts">
             <button id="btn-select-all" class="shortcut-link">[all]</button>
             <button id="btn-select-none" class="shortcut-link">[none]</button>
           </span>
         </div>
-        <div class="toggle-group">
-          <!-- Dynamic toggles will be injected here -->
-        </div>
+        <p class="preset-description" id="preset-desc-text">Hypothesis 1: Is an O(N log N) spatial tree always faster than O(N²) Sweep &amp; Prune?</p>
       </section>
 
       <!-- 1. Controls Section -->
@@ -209,436 +206,107 @@
           The Physics of Memory: ECS vs OOP Spatial Benchmark
         </h2>
         <div class="blog-meta">
-          Published June 2026 • Verified on Apple M4 Pro (5,000 Entities)
+          Published June 2026 • Verified on Apple M4 Pro (15,000 Entities)
         </div>
 
         <article class="blog-article">
           <p>
-            When writing high-performance code in modern engines, we are no
-            longer bottlenecked purely by raw CPU cycle speeds. Instead, we are
-            bottlenecked by the speed of retrieving data from main memory. This
-            spatial benchmark explores how data structures impact CPU cache
-            behavior, pitting traditional
-            <strong>Object-Oriented Programming (OOP)</strong> against a
-            Data-Oriented <strong>Entity Component System (ECS)</strong> using a
-            Sweep-and-Prune (S&P) collision engine.
+            When writing high-performance physics or spatial engines on the web, execution speed is no longer limited purely by CPU instruction cycles. Instead, performance is governed by the time required to shuttle data from RAM into CPU caches. This live benchmark suite examines how data structures and algorithm choices dictate hardware cache behavior, pitting traditional <strong>Object-Oriented Programming (OOP)</strong> against Data-Oriented <strong>Entity Component Systems (ECS)</strong> across Javascript and WebAssembly.
           </p>
 
-          <h3>MacBook Pro M4 Benchmark Results</h3>
+          <h3>Research Focus Outline</h3>
           <p>
-            The following table documents the benchmark results recorded on an
-            <strong>Apple M4 Pro chip</strong> running a simulation of
-            <strong>5,000 active physical entities</strong>:
+            To cut through information overload, we analyze performance by testing one specific hypothesis at a time, culminating in a head-to-head showdown between the fastest broadphase engines at 15,000 active colliding entities:
           </p>
-
-          <p>
-            *(Note: The library-based bitECS implementation was also tested and
-            performed virtually identical to our ECS S&P implementation.)*
-          </p>
-
-          <h4>1. Static Behavior (Absolute Coherence)</h4>
-          <div class="blog-table-container">
-            <table class="blog-table">
-              <thead>
-                <tr>
-                  <th></th>
-                  <th>Paradigm</th>
-                  <th>Runtime</th>
-                  <th>Algorithm</th>
-                  <th>Avg Frame Time</th>
-                  <th>Speedup vs OOP S&P</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><span class="legend-dot legend-wasm"></span></td>
-                  <td>ECS</td>
-                  <td>WASM</td>
-                  <td>Sweep & Prune</td>
-                  <td>0.138 ms</td>
-                  <td><span class="highlight-speedup">3.88x</span></td>
-                </tr>
-                <tr>
-                  <td><span class="legend-dot legend-ecs"></span></td>
-                  <td>ECS</td>
-                  <td>JS</td>
-                  <td>Sweep & Prune</td>
-                  <td>0.400 ms</td>
-                  <td><span class="highlight-speedup">1.34x</span></td>
-                </tr>
-                <tr>
-                  <td><span class="legend-dot legend-oop"></span></td>
-                  <td>OOP</td>
-                  <td>JS</td>
-                  <td>Sweep & Prune</td>
-                  <td>0.537 ms</td>
-                  <td>1.00x</td>
-                </tr>
-                <tr>
-                  <td><span class="legend-dot legend-oop-tree"></span></td>
-                  <td>OOP</td>
-                  <td>JS</td>
-                  <td>AABB Tree</td>
-                  <td>0.702 ms</td>
-                  <td>0.76x</td>
-                </tr>
-                <tr>
-                  <td><span class="legend-dot legend-ecs-tree"></span></td>
-                  <td>ECS</td>
-                  <td>JS</td>
-                  <td>AABB Tree</td>
-                  <td>0.762 ms</td>
-                  <td>0.70x</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <h4>2. Wandering Behavior (High Coherence)</h4>
-          <div class="blog-table-container">
-            <table class="blog-table">
-              <thead>
-                <tr>
-                  <th></th>
-                  <th>Paradigm</th>
-                  <th>Runtime</th>
-                  <th>Algorithm</th>
-                  <th>Avg Frame Time</th>
-                  <th>Speedup vs OOP S&P</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><span class="legend-dot legend-wasm"></span></td>
-                  <td>ECS</td>
-                  <td>WASM</td>
-                  <td>Sweep & Prune</td>
-                  <td>0.307 ms</td>
-                  <td><span class="highlight-speedup">3.56x</span></td>
-                </tr>
-                <tr>
-                  <td><span class="legend-dot legend-ecs"></span></td>
-                  <td>ECS</td>
-                  <td>JS</td>
-                  <td>Sweep & Prune</td>
-                  <td>0.804 ms</td>
-                  <td><span class="highlight-speedup">1.36x</span></td>
-                </tr>
-                <tr>
-                  <td><span class="legend-dot legend-oop"></span></td>
-                  <td>OOP</td>
-                  <td>JS</td>
-                  <td>Sweep & Prune</td>
-                  <td>1.093 ms</td>
-                  <td>1.00x</td>
-                </tr>
-                <tr>
-                  <td><span class="legend-dot legend-ecs-tree"></span></td>
-                  <td>ECS</td>
-                  <td>JS</td>
-                  <td>AABB Tree</td>
-                  <td>2.471 ms</td>
-                  <td>0.44x</td>
-                </tr>
-                <tr>
-                  <td><span class="legend-dot legend-oop-tree"></span></td>
-                  <td>OOP</td>
-                  <td>JS</td>
-                  <td>AABB Tree</td>
-                  <td>2.752 ms</td>
-                  <td>0.40x</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <h4>3. Erratic Behavior (Low Coherence)</h4>
-          <div class="blog-table-container">
-            <table class="blog-table">
-              <thead>
-                <tr>
-                  <th></th>
-                  <th>Paradigm</th>
-                  <th>Runtime</th>
-                  <th>Algorithm</th>
-                  <th>Avg Frame Time</th>
-                  <th>Speedup vs OOP S&P</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><span class="legend-dot legend-wasm"></span></td>
-                  <td>ECS</td>
-                  <td>WASM</td>
-                  <td>Sweep & Prune</td>
-                  <td>3.510 ms</td>
-                  <td><span class="highlight-speedup">3.57x</span></td>
-                </tr>
-                <tr>
-                  <td><span class="legend-dot legend-ecs"></span></td>
-                  <td>ECS</td>
-                  <td>JS</td>
-                  <td>Sweep & Prune</td>
-                  <td>4.630 ms</td>
-                  <td><span class="highlight-speedup">2.71x</span></td>
-                </tr>
-                <tr>
-                  <td><span class="legend-dot legend-ecs-tree"></span></td>
-                  <td>ECS</td>
-                  <td>JS</td>
-                  <td>AABB Tree</td>
-                  <td>5.025 ms</td>
-                  <td><span class="highlight-speedup">2.50x</span></td>
-                </tr>
-                <tr>
-                  <td><span class="legend-dot legend-oop-tree"></span></td>
-                  <td>OOP</td>
-                  <td>JS</td>
-                  <td>AABB Tree</td>
-                  <td>5.247 ms</td>
-                  <td><span class="highlight-speedup">2.39x</span></td>
-                </tr>
-                <tr>
-                  <td><span class="legend-dot legend-oop"></span></td>
-                  <td>OOP</td>
-                  <td>JS</td>
-                  <td>Sweep & Prune</td>
-                  <td>12.542 ms</td>
-                  <td>1.00x</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <h3>Understanding the Simulation Modes</h3>
-          <p>
-            The performance of the Sweep-and-Prune (S&P) broadphase is likely
-            heavily tied to <strong>spatial coherence</strong>—the
-            frame-to-frame stability of entity coordinates. This benchmark
-            allows you to toggle between three coherence profiles:
-          </p>
-          <ul>
+          <ol>
             <li>
-              <strong>Wandering Mode (High Coherence)</strong>: Entities move
-              smoothly along continuous pathways. Because their relative order
-              along the X-axis changes very little from frame to frame, the axis
-              remains almost completely sorted. This allows the broadphase
-              Insertion Sort to run in near-linear time ($O(n)$) in most frames.
-              This represents typical real-time game simulation physics.
+              <strong>H1: Spatial Trees vs. Sweep &amp; Prune</strong><br />
+              <em>Hypothesis:</em> An $O(N \log N)$ spatial tree is always faster than $O(N^2)$ Sweep &amp; Prune.<br />
+              <em>Verdict:</em> <strong>Almost always no!</strong> Contiguous array access in flat Sweep &amp; Prune beats trees under normal coherent motion. Furthermore, equipping Sweep &amp; Prune with <strong>Merge Sort</strong> makes it universally faster than spatial trees across all workloads, unless I'm running weirdly extreme chaotic simulations.
             </li>
             <li>
-              <strong>Erratic Mode (Low Coherence)</strong>: Entities teleport
-              randomly across the canvas each frame, simulating extreme scene
-              changes. This typically breaks frame-to-frame spatial sorting. The
-              broadphase is forced to re-sort the axis from scratch, degrading
-              Insertion Sort to its worst-case quadratic complexity ($O(n^2)$)
-              and showing how different memory layouts handle massive cache
-              thrashing.
+              <strong>H2: Sorting Strategies at Scale</strong><br />
+              <em>Hypothesis:</em> Naive Insertion Sort ($O(N)$ nearly sorted) is optimal for real-time physics simulation.<br />
+              <em>Verdict:</em> <strong>Kinda!</strong> While Insertion Sort is technically fine for normal game workloads, <strong>I make Merge Sort my engine default</strong>. It provides rock-solid frame rate consistency across all scene types, avoiding catastrophic quadratic meltdowns during chaotic gameplay.
             </li>
             <li>
-              <strong>Static Mode (Absolute Coherence)</strong>: Entities remain
-              completely stationary. Positions never change, requiring zero
-              sorting operations. This isolates the sweep overlap checks (AABB
-              bounding box tests), indicating potential read-performance
-              differences.
+              <strong>H3: Javascript vs. WebAssembly</strong><br />
+              <em>Hypothesis:</em> WebAssembly is required to realize the cache locality benefits of ECS.<br />
+              <em>Verdict:</em> <strong>False!</strong> Switching memory layout from AoS (Objects) to SoA (TypedArrays) in pure Javascript alone yields massive 3x to 22x speedups over traditional OOP.
             </li>
-          </ul>
+            <li>
+              <strong>🏆 Grand Finale: The Titan Showdown</strong><br />
+              <em>Question:</em> What is the absolute fastest spatial broadphase algorithm on the web today?<br />
+              <em>Verdict:</em> Pitting the top spatial trees (<code>WASM Tree</code>, <code>JS ECS Tree</code>) head-to-head against the reigning Sweep &amp; Prune champions (<code>WASM Merge S&amp;P</code>, <code>JS Merge S&amp;P</code>).
+            </li>
+          </ol>
 
-          <h3>Key Takeaways & Technical Analysis</h3>
-
-          <h4>1. High Spatial Coherence Keeps Sorting Cheap ($O(n)$)</h4>
+          <h3>🏆 The Titan Showdown Head-to-Head (15,000 Erratic Entities)</h3>
           <p>
-            Under <strong>Static</strong> and <strong>Wandering</strong> modes,
-            the circles maintain their spatial positions frame-to-frame. Because
-            the list is already nearly sorted, S&P's sorting phase completes in
-            near-linear time ($O(n)$). Here, the timed benchmark is likely
-            dominated by the sweep phase (AABB overlap checks).
-          </p>
-          <p>
-            Even with sorting overhead minimized, the ECS implementations
-            achieve up to a <strong>3.56x speedup</strong>
-            (with WASM ECS running at 0.307 ms vs OOP's 1.093 ms). Under OOP,
-            resolving Y-overlaps likely requires dereferencing scattered heap
-            objects to pull their `y` and `h` variables. In the ECS, these
-            components are loaded contiguously from flat arrays.
-          </p>
-
-          <h4>2. The Cache Co-location Optimization</h4>
-          <p>
-            During early optimization, a pure Struct-of-Arrays (SoA) layout was
-            used. However, it appeared that during the sweep overlap check, the
-            CPU was likely making separate reads to independent `posY`, `w`, and
-            `h` arrays.
-          </p>
-          <p>
-            To improve L1/L2 cache line efficiency, we redesigned the layout:
-          </p>
-          <ul>
-            <li>
-              <strong>Isolated `posX` (Float64Array)</strong>: Keeps sorting
-              entirely contiguous, allowing the CPU to load exactly 8
-              X-coordinates per 64-byte cache line request.
-            </li>
-            <li>
-              <strong>Interleaved `posYwh` (Float64Array)</strong>: Combines
-              `y`, `w`, and `h` into a single packed array (`[y, w, h]` - 24
-              bytes per entity). When the sweep phase detects an X-axis overlap,
-              the CPU can load the Y coordinate, width, and height together in a
-              single cache line transaction, likely reducing extra memory hops.
-            </li>
-          </ul>
-
-          <h4>3. Optimized Sorting Implementations</h4>
-          <p>
-            To ensure a fair comparison between the paradigms, the Sweep-and-Prune algorithms do not use basic, unoptimized sorting implementations. Instead, they use memory-aligned and hybrid strategies:
-          </p>
-          <ul>
-            <li>
-              <strong>Memory-Optimized ECS Sorting</strong>: Rather than moving multi-component data dynamically on every swap, we sort a single flat index array (like an <code>Int32Array</code>) referencing the coordinates. This minimizes data writes and keeps iterations cache-friendly.
-            </li>
-            <li>
-              <strong>Hybrid Pivot Selection</strong>: Both native JavaScript and WASM (AssemblyScript) Quicksort implementations select a median/midpoint pivot to avoid worst-case $O(n^2)$ complexity on pre-sorted data. They also fall back to a tight Insertion Sort range once subarray sizes fall below 12 elements, avoiding V8/WASM function recursion overhead.
-            </li>
-            <li>
-              <strong>Double-Buffered (Ping-Pong) Mergesort</strong>: Our Mergesort implementations avoid copying elements back to the main array at the end of each merge step. By alternating source and destination buffers at each recursion level, we eliminate millions of array write operations per frame.
-            </li>
-          </ul>
-
-          <h4>4. Erratic Mode: The Cache Miss Meltdown ($O(n^2)$)</h4>
-          <p>
-            Under <strong>Erratic</strong> mode, entities teleport randomly.
-            This breaks spatial coherence and causes Insertion Sort to degrade
-            to its worst-case quadratic complexity ($O(n^2)$). The CPU is then
-            forced to perform millions of comparisons and swaps to re-sort the
-            axis.
-          </p>
-          <p>
-            While both systems drop in performance, the ECS implementations
-            maintain up to a massive <strong>3.57x speedup</strong> (with
-            WebAssembly ECS running at 3.510 ms vs OOP's 12.542 ms). In the OOP
-            loop, swap operations involve moving references inside the scrambled
-            `entities` array, which likely causes CPU cache stalls as the
-            processor waits for RAM requests. In the ECS, the sort swaps
-            integers in a flat contiguous `indices` array and checks positions
-            in `posX`. The CPU pre-fetcher can load the X positions sequentially
-            into cache, which likely allows the hardware to execute comparisons
-            more efficiently.
-          </p>
-
-          <h4>5. OOP Tree vs ECS Tree: Flat BVH vs Pointer Chasing</h4>
-          <p>
-            To further illustrate the impact of memory layout, we compared two
-            Bounding Volume Hierarchy solvers: **OOP Tree** and **ECS Custom
-            Tree**. Theoretically, hierarchical bounding tree updates take
-            $O(\log n)$ per entity, and overlap queries take $O(n \log n)$,
-            which is algorithmically superior to Sweep-and-Prune's worst-case
-            $O(n^2)$ in Erratic mode.
-          </p>
-          <p>
-            However, their memory layouts lead to vastly different CPU cache
-            efficiencies:
-          </p>
-          <ul>
-            <li>
-              <strong>OOP Tree (Pointer Chasing)</strong>: The tree nodes are
-              independent JavaScript objects allocated dynamically on the heap.
-              Traversing this tree for overlap queries requires dereferencing
-              node pointers sequentially. This "pointer-chasing" behavior causes
-              severe cache thrashing, as node data is scrambled across the heap.
-            </li>
-            <li>
-              <strong>ECS Tree (Flat BVH)</strong>: The tree nodes are packed
-              into flat, contiguous typed arrays (`Int32Array`, `Float64Array`).
-              Children and parents are referenced by flat array indices instead
-              of heap pointers. Traversing the tree involves reading sequential
-              elements, which matches the CPU's memory pre-fetch patterns and
-              runs much faster than its OOP counterpart.
-            </li>
-          </ul>
-
-          <h4>
-            6. Scaling Limits: When $O(n \log n)$ Trees Overtake $O(n^2)$ S&P
-          </h4>
-          <p>
-            While Sweep-and-Prune (S&P) dominates at smaller entity counts
-            (5,000 entities) even under low coherence, algorithmic complexity
-            eventually dominates memory layout efficiency as the simulation
-            scales. The following table showcases a high-entity-count test
-            (<strong>14,200 entities</strong>) in <strong>Erratic Mode</strong>:
+            When entities teleport chaotically across the canvas (low coherence), we force every engine into its hardest algorithmic bottleneck. The table below documents average frame times recorded on an Apple M4 Pro:
           </p>
 
           <div class="blog-table-container">
             <table class="blog-table">
               <thead>
                 <tr>
-                  <th></th>
                   <th>Paradigm</th>
                   <th>Runtime</th>
-                  <th>Algorithm</th>
+                  <th>Architecture</th>
+                  <th>Broadphase Algorithm</th>
                   <th>Avg Frame Time</th>
-                  <th>99th Percentile</th>
-                  <th>Speedup vs OOP S&P</th>
+                  <th>Verdict</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td><span class="legend-dot legend-ecs-tree"></span></td>
-                  <td>ECS</td>
-                  <td>JS</td>
-                  <td>AABB Tree</td>
-                  <td>16.007 ms</td>
-                  <td>17.200 ms</td>
-                  <td><span class="highlight-speedup">6.21x</span></td>
-                </tr>
-                <tr>
-                  <td><span class="legend-dot legend-oop-tree"></span></td>
-                  <td>OOP</td>
-                  <td>JS</td>
-                  <td>AABB Tree</td>
-                  <td>18.133 ms</td>
-                  <td>24.500 ms</td>
-                  <td><span class="highlight-speedup">5.48x</span></td>
-                </tr>
-                <tr>
-                  <td><span class="legend-dot legend-wasm"></span></td>
-                  <td>ECS</td>
+                  <td><span class="legend-dot legend-wasm"></span> ECS</td>
                   <td>WASM</td>
-                  <td>Sweep & Prune</td>
-                  <td>27.437 ms</td>
-                  <td>28.300 ms</td>
-                  <td><span class="highlight-speedup">3.62x</span></td>
+                  <td>1D Flat Memory Array</td>
+                  <td>Sweep &amp; Prune (Merge Sort)</td>
+                  <td class="font-mono bold">1.36 ms</td>
+                  <td>🏆 Undisputed Grand Champion</td>
                 </tr>
                 <tr>
-                  <td><span class="legend-dot legend-ecs"></span></td>
-                  <td>ECS</td>
+                  <td><span class="legend-dot legend-ecs"></span> ECS</td>
                   <td>JS</td>
-                  <td>Sweep & Prune</td>
-                  <td>37.769 ms</td>
-                  <td>46.300 ms</td>
-                  <td><span class="highlight-speedup">2.63x</span></td>
+                  <td>1D Flat Memory Array</td>
+                  <td>Sweep &amp; Prune (Merge Sort)</td>
+                  <td class="font-mono">2.51 ms</td>
+                  <td>Best pure Javascript engine</td>
                 </tr>
                 <tr>
-                  <td><span class="legend-dot legend-oop"></span></td>
-                  <td>OOP</td>
+                  <td><span class="legend-dot legend-wasm"></span> ECS</td>
+                  <td>WASM</td>
+                  <td>2D Spatial Flat BVH</td>
+                  <td>AABB Tree Traversal</td>
+                  <td class="font-mono">17.44 ms</td>
+                  <td>Peak spatial tree performance</td>
+                </tr>
+                <tr>
+                  <td><span class="legend-dot legend-ecs-tree"></span> ECS</td>
                   <td>JS</td>
-                  <td>Sweep & Prune</td>
-                  <td>99.397 ms</td>
-                  <td>219.400 ms</td>
-                  <td>1.00x</td>
+                  <td>2D Spatial Flat BVH</td>
+                  <td>AABB Tree Traversal</td>
+                  <td class="font-mono">19.12 ms</td>
+                  <td>JS spatial tree baseline</td>
                 </tr>
               </tbody>
             </table>
           </div>
 
+          <h3>Technical Takeaways</h3>
+          <h4>1. Why I Make Merge Sort My Default</h4>
           <p>
-            At 14,200 entities under Erratic mode, the $O(n^2)$ sorting overhead
-            of S&P becomes overwhelming (over 200 million possible index swap
-            comparisons). Despite WASM S&P's cache efficiency, the $O(n \log n)$
-            tree-hierarchy implementations (both OOP and ECS Tree) run
-            significantly faster. Notably, <strong>ECS Tree</strong> remains the
-            absolute fastest overall (<strong>16.007 ms</strong>) by combining
-            the algorithmic benefits of trees with a cache-friendly flat memory
-            layout.
+            In everyday 2D game scenarios (under 5,000 entities), both Insertion Sort and Merge Sort execute in a tiny fraction of a millisecond. Nobody will ever notice the difference. However, the engineering argument for making **Merge Sort** my default is **frame rate consistency**. Under erratic scene changes at 15,000 bodies, naive Insertion Sort drops into a quadratic $O(N^2)$ meltdown: <strong>43.16 ms (JS)</strong> and <strong>128.47 ms (OOP)</strong>—slower than spatial trees (~19 ms).
+          </p>
+          <p>
+            By contrast, **Merge Sort** ($O(N \log N)$) streams contiguous cache lines with nearly 100% branch predictability. **Merge Sort Sweep &amp; Prune** runs at <strong>1.36 ms</strong>—over <strong>13 times faster than WebAssembly spatial trees</strong> without any risk of sporadic frame rate meltdowns!
+          </p>
+
+          <h4>2. Struct-of-Arrays (SoA) Interleaving</h4>
+          <p>
+            To achieve these memory speeds in Javascript, we separate position coordinates (`posX` Float64Array) from bounding box dimensions. By interleaving `posY`, `width`, and `height` into a single packed array (`posYwh`), when the broadphase detects an X-axis overlap, the CPU loads the Y coordinate and dimensions together in a single 64-byte cache line request.
           </p>
         </article>
       </section>

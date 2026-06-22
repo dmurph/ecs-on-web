@@ -17,3 +17,6 @@ export const SortMethod = {
 
 export type SortMethod = typeof SortMethod[keyof typeof SortMethod];
 
+export const TREE_REBALANCE_FRAME_INTERVAL = 16;
+export const TREE_REBALANCE_PERCENTAGE = 0.001; // 0.1%
+
