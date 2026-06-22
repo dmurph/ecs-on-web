@@ -80,6 +80,7 @@ let speedupValuesContainer: HTMLElement;
 
 let chartFrameIndexEl: HTMLElement;
 let chartFrameTotalEl: HTMLElement;
+let btnToggleVisualizer: HTMLButtonElement;
 
 // Maps for simulator-specific elements
 const currentTimeEls: Record<string, HTMLElement> = {};
@@ -309,6 +310,7 @@ export function initUI(activeSimulatorIds?: string[]) {
 
   chartFrameIndexEl = document.getElementById('chart-frame-index')!;
   chartFrameTotalEl = document.getElementById('chart-frame-total')!;
+  btnToggleVisualizer = document.getElementById('btn-toggle-visualizer') as HTMLButtonElement;
 
   SIMULATOR_REGISTRY.forEach(sim => {
     toggles[sim.id] = document.getElementById(`toggle-${sim.id}`) as HTMLInputElement;
@@ -352,6 +354,34 @@ export function setupUIListeners(callbacks: UICallbacks) {
   btnPause.addEventListener('click', callbacks.onPause);
   btnReset.addEventListener('click', callbacks.onReset);
   btnCopyResults.addEventListener('click', callbacks.onCopy);
+
+  if (btnToggleVisualizer) {
+    let isVisualizerVisible = false; // Default to not showing
+    try {
+      const stored = localStorage.getItem('ecs-benchmark-visualizer-visible');
+      if (stored !== null) {
+        isVisualizerVisible = JSON.parse(stored);
+      }
+    } catch (e) {}
+
+    const grid = document.querySelector('.visualizer-grid');
+    btnToggleVisualizer.textContent = isVisualizerVisible ? 'Hide Visualizations' : 'Show Visualizations';
+    if (grid) grid.classList.toggle('hidden', !isVisualizerVisible);
+
+    btnToggleVisualizer.addEventListener('click', () => {
+      isVisualizerVisible = !isVisualizerVisible;
+      try {
+        localStorage.setItem('ecs-benchmark-visualizer-visible', JSON.stringify(isVisualizerVisible));
+      } catch (e) {}
+      btnToggleVisualizer.textContent = isVisualizerVisible ? 'Hide Visualizations' : 'Show Visualizations';
+      if (grid) {
+        grid.classList.toggle('hidden', !isVisualizerVisible);
+        if (isVisualizerVisible) {
+          resizeCanvases();
+        }
+      }
+    });
+  }
 
   compareBaselineSelect.addEventListener('change', () => {
     callbacks.onBaselineChange?.(compareBaselineSelect.value);
@@ -639,12 +669,20 @@ function resizeCanvases() {
     }
   }
 
+  if (w === 0 || h === 0) {
+    const sectionEl = document.querySelector('.section-output');
+    w = (sectionEl && sectionEl.clientWidth > 0) ? sectionEl.clientWidth : window.innerWidth;
+    h = 500;
+  }
+
   if (w > 0 && h > 0) {
     SIMULATOR_REGISTRY.forEach(sim => {
       const canvas = canvases[sim.id];
       if (canvas) {
-        canvas.width = w;
-        canvas.height = h;
+        if (canvas.width !== w || canvas.height !== h) {
+          canvas.width = w;
+          canvas.height = h;
+        }
       }
     });
   }
