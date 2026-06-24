@@ -2,92 +2,7 @@ import { addEntity, addComponent, createWorld, query } from 'bitecs';
 import { SeededPRNG } from '../prng';
 import { ENTITY_COLORS, ENTITY_MAX_SPEED } from '../config';
 import type { Simulator, EntityState, RenderEntity } from '../simulator';
-// Helper: Insertion sort over a range for subarrays
-function insertionSortRangeBitecs(entities: Int32Array, posX: Float64Array, left: number, right: number) {
-  for (let i = left + 1; i <= right; i++) {
-    const currIdx = entities[i];
-    const currX = posX[currIdx];
-    let j = i - 1;
-    while (j >= left && posX[entities[j]] > currX) {
-      entities[j + 1] = entities[j];
-      j--;
-    }
-    entities[j + 1] = currIdx;
-  }
-}
 
-export function insertionSortBitecs(entities: Int32Array, posX: Float64Array) {
-  insertionSortRangeBitecs(entities, posX, 0, entities.length - 1);
-}
-
-export function quickSortBitecs(entities: Int32Array, posX: Float64Array, left: number, right: number) {
-  if (right - left < 12) {
-    insertionSortRangeBitecs(entities, posX, left, right);
-    return;
-  }
-  const pivotIdx = partitionBitecs(entities, posX, left, right);
-  quickSortBitecs(entities, posX, left, pivotIdx - 1);
-  quickSortBitecs(entities, posX, pivotIdx + 1, right);
-}
-
-function partitionBitecs(entities: Int32Array, posX: Float64Array, left: number, right: number): number {
-  const mid = (left + right) >> 1;
-  const tempMid = entities[mid];
-  entities[mid] = entities[right];
-  entities[right] = tempMid;
-
-  const pivotVal = posX[entities[right]];
-  let i = left - 1;
-  for (let j = left; j < right; j++) {
-    if (posX[entities[j]] < pivotVal) {
-      i++;
-      const temp = entities[i];
-      entities[i] = entities[j];
-      entities[j] = temp;
-    }
-  }
-  const temp = entities[i + 1];
-  entities[i + 1] = entities[right];
-  entities[right] = temp;
-  return i + 1;
-}
-
-export function mergeSortBitecs(entities: Int32Array, posX: Float64Array, temp: Int32Array, left: number, right: number) {
-  temp.set(entities);
-  mergeSortBitecsRec(temp, entities, posX, left, right);
-}
-
-function mergeSortBitecsRec(src: Int32Array, dst: Int32Array, posX: Float64Array, left: number, right: number) {
-  if (right - left < 12) {
-    insertionSortRangeBitecs(dst, posX, left, right);
-    for (let m = left; m <= right; m++) {
-      src[m] = dst[m];
-    }
-    return;
-  }
-  const mid = (left + right) >> 1;
-  mergeSortBitecsRec(dst, src, posX, left, mid);
-  mergeSortBitecsRec(dst, src, posX, mid + 1, right);
-  
-  let i = left;
-  let j = mid + 1;
-  let k = left;
-
-  while (i <= mid && j <= right) {
-    if (posX[src[i]] <= posX[src[j]]) {
-      dst[k++] = src[i++];
-    } else {
-      dst[k++] = src[j++];
-    }
-  }
-
-  while (i <= mid) {
-    dst[k++] = src[i++];
-  }
-  while (j <= right) {
-    dst[k++] = src[j++];
-  }
-}
 
 export interface BitecsStore {
   world: any;
@@ -96,6 +11,63 @@ export interface BitecsStore {
   PositionYwh: { y: Float64Array; w: Float64Array; h: Float64Array };
   Physics: { vx: Float64Array; vy: Float64Array; angle: Float64Array };
   Style: { colorId: Uint8Array };
+}
+
+export function updateMovement(
+  store: BitecsStore,
+  canvasWidth: number,
+  canvasHeight: number,
+  speedMultiplier: number,
+  behavior: string,
+  prng: SeededPRNG
+) {
+  const { world, PositionX, PositionYwh, Physics } = store;
+  if (behavior === 'wander') {
+    for (const eid of query(world, [PositionX, PositionYwh, Physics])) {
+      Physics.angle[eid] += (prng.next() - 0.5) * 0.4;
+      Physics.vx[eid] = Math.cos(Physics.angle[eid]) * 1.2 * speedMultiplier;
+      Physics.vy[eid] = Math.sin(Physics.angle[eid]) * 1.2 * speedMultiplier;
+
+      PositionX.value[eid] += Physics.vx[eid];
+      PositionYwh.y[eid] += Physics.vy[eid];
+
+      let bounced = false;
+      const w = PositionYwh.w[eid];
+      const h = PositionYwh.h[eid];
+
+      if (PositionX.value[eid] < 0) {
+        PositionX.value[eid] = 0;
+        Physics.angle[eid] = Math.PI - Physics.angle[eid];
+        bounced = true;
+      } else if (PositionX.value[eid] + w > canvasWidth) {
+        PositionX.value[eid] = canvasWidth - w;
+        Physics.angle[eid] = Math.PI - Physics.angle[eid];
+        bounced = true;
+      }
+
+      if (PositionYwh.y[eid] < 0) {
+        PositionYwh.y[eid] = 0;
+        Physics.angle[eid] = -Physics.angle[eid];
+        bounced = true;
+      } else if (PositionYwh.y[eid] + h > canvasHeight) {
+        PositionYwh.y[eid] = canvasHeight - h;
+        Physics.angle[eid] = -Physics.angle[eid];
+        bounced = true;
+      }
+
+      if (bounced) {
+        Physics.vx[eid] = Math.cos(Physics.angle[eid]) * 1.2 * speedMultiplier;
+        Physics.vy[eid] = Math.sin(Physics.angle[eid]) * 1.2 * speedMultiplier;
+      }
+    }
+  } else if (behavior === 'erratic') {
+    for (const eid of query(world, [PositionX, PositionYwh, Physics])) {
+      const w = PositionYwh.w[eid];
+      const h = PositionYwh.h[eid];
+      PositionX.value[eid] = prng.next() * (canvasWidth - w);
+      PositionYwh.y[eid] = prng.next() * (canvasHeight - h);
+    }
+  }
 }
 
 export function createBitecsData(world: any, numEntities: number, canvasWidth: number, canvasHeight: number): BitecsStore {
@@ -260,62 +232,6 @@ export function resolveCollisions(
   return collisionCount;
 }
 
-export function updateMovement(
-  store: BitecsStore,
-  canvasWidth: number,
-  canvasHeight: number,
-  speedMultiplier: number,
-  behavior: string,
-  prng: SeededPRNG
-) {
-  const { world, PositionX, PositionYwh, Physics } = store;
-  if (behavior === 'wander') {
-    for (const eid of query(world, [PositionX, PositionYwh, Physics])) {
-      Physics.angle[eid] += (prng.next() - 0.5) * 0.4;
-      Physics.vx[eid] = Math.cos(Physics.angle[eid]) * 1.2 * speedMultiplier;
-      Physics.vy[eid] = Math.sin(Physics.angle[eid]) * 1.2 * speedMultiplier;
-
-      PositionX.value[eid] += Physics.vx[eid];
-      PositionYwh.y[eid] += Physics.vy[eid];
-
-      let bounced = false;
-      const w = PositionYwh.w[eid];
-      const h = PositionYwh.h[eid];
-
-      if (PositionX.value[eid] < 0) {
-        PositionX.value[eid] = 0;
-        Physics.angle[eid] = Math.PI - Physics.angle[eid];
-        bounced = true;
-      } else if (PositionX.value[eid] + w > canvasWidth) {
-        PositionX.value[eid] = canvasWidth - w;
-        Physics.angle[eid] = Math.PI - Physics.angle[eid];
-        bounced = true;
-      }
-
-      if (PositionYwh.y[eid] < 0) {
-        PositionYwh.y[eid] = 0;
-        Physics.angle[eid] = -Physics.angle[eid];
-        bounced = true;
-      } else if (PositionYwh.y[eid] + h > canvasHeight) {
-        PositionYwh.y[eid] = canvasHeight - h;
-        Physics.angle[eid] = -Physics.angle[eid];
-        bounced = true;
-      }
-
-      if (bounced) {
-        Physics.vx[eid] = Math.cos(Physics.angle[eid]) * 1.2 * speedMultiplier;
-        Physics.vy[eid] = Math.sin(Physics.angle[eid]) * 1.2 * speedMultiplier;
-      }
-    }
-  } else if (behavior === 'erratic') {
-    for (const eid of query(world, [PositionX, PositionYwh, Physics])) {
-      const w = PositionYwh.w[eid];
-      const h = PositionYwh.h[eid];
-      PositionX.value[eid] = prng.next() * (canvasWidth - w);
-      PositionYwh.y[eid] = prng.next() * (canvasHeight - h);
-    }
-  }
-}
 
 /**
  * Simulator representing a highly optimized third-party ECS framework (bitECS).
@@ -437,4 +353,91 @@ export {
   runBroadphase as runBitecsBroadphase,
   resolveCollisions as resolveBitecsPhysics
 };
+
+// Helper: Insertion sort over a range for subarrays
+function insertionSortRangeBitecs(entities: Int32Array, posX: Float64Array, left: number, right: number) {
+  for (let i = left + 1; i <= right; i++) {
+    const currIdx = entities[i];
+    const currX = posX[currIdx];
+    let j = i - 1;
+    while (j >= left && posX[entities[j]] > currX) {
+      entities[j + 1] = entities[j];
+      j--;
+    }
+    entities[j + 1] = currIdx;
+  }
+}
+
+export function insertionSortBitecs(entities: Int32Array, posX: Float64Array) {
+  insertionSortRangeBitecs(entities, posX, 0, entities.length - 1);
+}
+
+export function quickSortBitecs(entities: Int32Array, posX: Float64Array, left: number, right: number) {
+  if (right - left < 12) {
+    insertionSortRangeBitecs(entities, posX, left, right);
+    return;
+  }
+  const pivotIdx = partitionBitecs(entities, posX, left, right);
+  quickSortBitecs(entities, posX, left, pivotIdx - 1);
+  quickSortBitecs(entities, posX, pivotIdx + 1, right);
+}
+
+function partitionBitecs(entities: Int32Array, posX: Float64Array, left: number, right: number): number {
+  const mid = (left + right) >> 1;
+  const tempMid = entities[mid];
+  entities[mid] = entities[right];
+  entities[right] = tempMid;
+
+  const pivotVal = posX[entities[right]];
+  let i = left - 1;
+  for (let j = left; j < right; j++) {
+    if (posX[entities[j]] < pivotVal) {
+      i++;
+      const temp = entities[i];
+      entities[i] = entities[j];
+      entities[j] = temp;
+    }
+  }
+  const temp = entities[i + 1];
+  entities[i + 1] = entities[right];
+  entities[right] = temp;
+  return i + 1;
+}
+
+export function mergeSortBitecs(entities: Int32Array, posX: Float64Array, temp: Int32Array, left: number, right: number) {
+  temp.set(entities);
+  mergeSortBitecsRec(temp, entities, posX, left, right);
+}
+
+function mergeSortBitecsRec(src: Int32Array, dst: Int32Array, posX: Float64Array, left: number, right: number) {
+  if (right - left < 12) {
+    insertionSortRangeBitecs(dst, posX, left, right);
+    for (let m = left; m <= right; m++) {
+      src[m] = dst[m];
+    }
+    return;
+  }
+  const mid = (left + right) >> 1;
+  mergeSortBitecsRec(dst, src, posX, left, mid);
+  mergeSortBitecsRec(dst, src, posX, mid + 1, right);
+  
+  let i = left;
+  let j = mid + 1;
+  let k = left;
+
+  while (i <= mid && j <= right) {
+    if (posX[src[i]] <= posX[src[j]]) {
+      dst[k++] = src[i++];
+    } else {
+      dst[k++] = src[j++];
+    }
+  }
+
+  while (i <= mid) {
+    dst[k++] = src[i++];
+  }
+  while (j <= right) {
+    dst[k++] = src[j++];
+  }
+}
 

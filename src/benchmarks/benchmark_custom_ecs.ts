@@ -2,92 +2,6 @@ import { ENTITY_COLORS, ENTITY_MAX_SPEED, SortMethod } from '../config';
 import type { SeededPRNG } from '../prng';
 import type { Simulator, EntityState, RenderEntity } from '../simulator';
 
-// === INTERNAL SORTING ALGORITHMS ===
-function insertionSortRangeECS(indices: Int32Array, posX: Float64Array | Float32Array, left: number, right: number) {
-  for (let i = left + 1; i <= right; i++) {
-    const currIdx = indices[i];
-    const currX = posX[currIdx];
-    let j = i - 1;
-    while (j >= left && posX[indices[j]] > currX) {
-      indices[j + 1] = indices[j];
-      j--;
-    }
-    indices[j + 1] = currIdx;
-  }
-}
-
-function insertionSortCustomECS(indices: Int32Array, posX: Float64Array) {
-  insertionSortRangeECS(indices, posX, 0, indices.length - 1);
-}
-
-function quickSortCustomECS(indices: Int32Array, posX: Float64Array, left: number, right: number) {
-  if (right - left < 12) {
-    insertionSortRangeECS(indices, posX, left, right);
-    return;
-  }
-  const pivotIdx = partitionCustomECS(indices, posX, left, right);
-  quickSortCustomECS(indices, posX, left, pivotIdx - 1);
-  quickSortCustomECS(indices, posX, pivotIdx + 1, right);
-}
-
-function partitionCustomECS(indices: Int32Array, posX: Float64Array, left: number, right: number): number {
-  const mid = (left + right) >> 1;
-  const tempMid = indices[mid];
-  indices[mid] = indices[right];
-  indices[right] = tempMid;
-
-  const pivotVal = posX[indices[right]];
-  let i = left - 1;
-  for (let j = left; j < right; j++) {
-    if (posX[indices[j]] < pivotVal) {
-      i++;
-      const temp = indices[i];
-      indices[i] = indices[j];
-      indices[j] = temp;
-    }
-  }
-  const temp = indices[i + 1];
-  indices[i + 1] = indices[right];
-  indices[right] = temp;
-  return i + 1;
-}
-
-function mergeSortCustomECS(indices: Int32Array, posX: Float64Array, temp: Int32Array, left: number, right: number) {
-  temp.set(indices);
-  mergeSortCustomECSRec(temp, indices, posX, left, right);
-}
-
-function mergeSortCustomECSRec(src: Int32Array, dst: Int32Array, posX: Float64Array, left: number, right: number) {
-  if (right - left < 12) {
-    insertionSortRangeECS(dst, posX, left, right);
-    for (let m = left; m <= right; m++) {
-      src[m] = dst[m];
-    }
-    return;
-  }
-  const mid = (left + right) >> 1;
-  mergeSortCustomECSRec(dst, src, posX, left, mid);
-  mergeSortCustomECSRec(dst, src, posX, mid + 1, right);
-  
-  let i = left;
-  let j = mid + 1;
-  let k = left;
-
-  while (i <= mid && j <= right) {
-    if (posX[src[i]] <= posX[src[j]]) {
-      dst[k++] = src[i++];
-    } else {
-      dst[k++] = src[j++];
-    }
-  }
-
-  while (i <= mid) {
-    dst[k++] = src[i++];
-  }
-  while (j <= right) {
-    dst[k++] = src[j++];
-  }
-}
 
 
 export interface ECSData {
@@ -128,6 +42,66 @@ export function createECSData(numEntities: number, canvasWidth: number, canvasHe
   }
 
   return { posX, posYwh, colorId, angle, vx, vy, indices, id };
+}
+
+
+export function updateMovement(
+  ecsData: ECSData,
+  canvasWidth: number,
+  canvasHeight: number,
+  speedMultiplier: number,
+  behavior: string,
+  prng: SeededPRNG
+) {
+  const { posX, posYwh, vx, vy, angle } = ecsData;
+  const len = posX.length;
+
+  if (behavior === 'wander') {
+    for (let i = 0; i < len; i++) {
+      angle[i] += (prng.next() - 0.5) * 0.4;
+      vx[i] = Math.cos(angle[i]) * 1.2 * speedMultiplier;
+      vy[i] = Math.sin(angle[i]) * 1.2 * speedMultiplier;
+
+      posX[i] += vx[i];
+      posYwh[i * 3 + 0] += vy[i]; // posY
+
+      let bounced = false;
+      const w = posYwh[i * 3 + 1];
+      const h = posYwh[i * 3 + 2];
+
+      if (posX[i] < 0) {
+        posX[i] = 0;
+        angle[i] = Math.PI - angle[i];
+        bounced = true;
+      } else if (posX[i] + w > canvasWidth) {
+        posX[i] = canvasWidth - w;
+        angle[i] = Math.PI - angle[i];
+        bounced = true;
+      }
+
+      if (posYwh[i * 3 + 0] < 0) {
+        posYwh[i * 3 + 0] = 0;
+        angle[i] = -angle[i];
+        bounced = true;
+      } else if (posYwh[i * 3 + 0] + h > canvasHeight) {
+        posYwh[i * 3 + 0] = canvasHeight - h;
+        angle[i] = -angle[i];
+        bounced = true;
+      }
+
+      if (bounced) {
+        vx[i] = Math.cos(angle[i]) * 1.2 * speedMultiplier;
+        vy[i] = Math.sin(angle[i]) * 1.2 * speedMultiplier;
+      }
+    }
+  } else if (behavior === 'erratic') {
+    for (let i = 0; i < len; i++) {
+      const w = posYwh[i * 3 + 1];
+      const h = posYwh[i * 3 + 2];
+      posX[i] = prng.next() * (canvasWidth - w);
+      posYwh[i * 3 + 0] = prng.next() * (canvasHeight - h);
+    }
+  }
 }
 
 export function runBroadphase(
@@ -451,4 +425,91 @@ export {
   runBroadphase as runECSBroadphase,
   resolveCollisions as resolveECSPhysics
 };
+
+// === INTERNAL SORTING ALGORITHMS ===
+function insertionSortRangeECS(indices: Int32Array, posX: Float64Array | Float32Array, left: number, right: number) {
+  for (let i = left + 1; i <= right; i++) {
+    const currIdx = indices[i];
+    const currX = posX[currIdx];
+    let j = i - 1;
+    while (j >= left && posX[indices[j]] > currX) {
+      indices[j + 1] = indices[j];
+      j--;
+    }
+    indices[j + 1] = currIdx;
+  }
+}
+
+function insertionSortCustomECS(indices: Int32Array, posX: Float64Array) {
+  insertionSortRangeECS(indices, posX, 0, indices.length - 1);
+}
+
+function quickSortCustomECS(indices: Int32Array, posX: Float64Array, left: number, right: number) {
+  if (right - left < 12) {
+    insertionSortRangeECS(indices, posX, left, right);
+    return;
+  }
+  const pivotIdx = partitionCustomECS(indices, posX, left, right);
+  quickSortCustomECS(indices, posX, left, pivotIdx - 1);
+  quickSortCustomECS(indices, posX, pivotIdx + 1, right);
+}
+
+function partitionCustomECS(indices: Int32Array, posX: Float64Array, left: number, right: number): number {
+  const mid = (left + right) >> 1;
+  const tempMid = indices[mid];
+  indices[mid] = indices[right];
+  indices[right] = tempMid;
+
+  const pivotVal = posX[indices[right]];
+  let i = left - 1;
+  for (let j = left; j < right; j++) {
+    if (posX[indices[j]] < pivotVal) {
+      i++;
+      const temp = indices[i];
+      indices[i] = indices[j];
+      indices[j] = temp;
+    }
+  }
+  const temp = indices[i + 1];
+  indices[i + 1] = indices[right];
+  indices[right] = temp;
+  return i + 1;
+}
+
+function mergeSortCustomECS(indices: Int32Array, posX: Float64Array, temp: Int32Array, left: number, right: number) {
+  temp.set(indices);
+  mergeSortCustomECSRec(temp, indices, posX, left, right);
+}
+
+function mergeSortCustomECSRec(src: Int32Array, dst: Int32Array, posX: Float64Array, left: number, right: number) {
+  if (right - left < 12) {
+    insertionSortRangeECS(dst, posX, left, right);
+    for (let m = left; m <= right; m++) {
+      src[m] = dst[m];
+    }
+    return;
+  }
+  const mid = (left + right) >> 1;
+  mergeSortCustomECSRec(dst, src, posX, left, mid);
+  mergeSortCustomECSRec(dst, src, posX, mid + 1, right);
+  
+  let i = left;
+  let j = mid + 1;
+  let k = left;
+
+  while (i <= mid && j <= right) {
+    if (posX[src[i]] <= posX[src[j]]) {
+      dst[k++] = src[i++];
+    } else {
+      dst[k++] = src[j++];
+    }
+  }
+
+  while (i <= mid) {
+    dst[k++] = src[i++];
+  }
+  while (j <= right) {
+    dst[k++] = src[j++];
+  }
+}
 

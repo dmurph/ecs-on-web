@@ -136,95 +136,6 @@ export function updateMovement(
   }
 }
 
-// Insertion Sort range helper
-function insertionSortRange(left: i32, right: i32): void {
-  const localIndices = indices;
-  const localPosX = posX;
-  for (let i = left + 1; i <= right; i++) {
-    const currIdx = unchecked(localIndices[i]);
-    const currX = unchecked(localPosX[currIdx]);
-    let j = i - 1;
-    while (j >= left) {
-      const prevIdx = unchecked(localIndices[j]);
-      if (unchecked(localPosX[prevIdx]) <= currX) break;
-      unchecked(localIndices[j + 1] = prevIdx);
-      j--;
-    }
-    unchecked(localIndices[j + 1] = currIdx);
-  }
-}
-
-// Quick Sort
-function quickSort(left: i32, right: i32): void {
-  if (right - left < 12) {
-    insertionSortRange(left, right);
-    return;
-  }
-  const pivotIdx = partition(left, right);
-  quickSort(left, pivotIdx - 1);
-  quickSort(pivotIdx + 1, right);
-}
-
-function partition(left: i32, right: i32): i32 {
-  const mid = (left + right) >> 1;
-  const tempMid = unchecked(indices[mid]);
-  unchecked(indices[mid] = indices[right]);
-  unchecked(indices[right] = tempMid);
-
-  const pivotVal = unchecked(posX[indices[right]]);
-  let i = left - 1;
-  for (let j = left; j < right; j++) {
-    if (unchecked(posX[indices[j]]) < pivotVal) {
-      i++;
-      const temp = unchecked(indices[i]);
-      unchecked(indices[i] = indices[j]);
-      unchecked(indices[j] = temp);
-    }
-  }
-  const temp = unchecked(indices[i + 1]);
-  unchecked(indices[i + 1] = indices[right]);
-  unchecked(indices[right] = temp);
-  return i + 1;
-}
-
-// Merge Sort (Ping-Pong / Double-Buffering)
-function mergeSortPingPongRec(src: StaticArray<i32>, dst: StaticArray<i32>, left: i32, right: i32): void {
-  if (right - left < 12) {
-    insertionSortRange(left, right);
-    for (let m = left; m <= right; m++) {
-      unchecked(src[m] = dst[m]);
-    }
-    return;
-  }
-  
-  const mid = (left + right) >> 1;
-  mergeSortPingPongRec(dst, src, left, mid);
-  mergeSortPingPongRec(dst, src, mid + 1, right);
-  
-  let i = left;
-  let j = mid + 1;
-  let k = left;
-
-  while (i <= mid && j <= right) {
-    const idxI = unchecked(src[i]);
-    const idxJ = unchecked(src[j]);
-    if (unchecked(posX[idxI]) <= unchecked(posX[idxJ])) {
-      unchecked(dst[k++] = idxI);
-      i++;
-    } else {
-      unchecked(dst[k++] = idxJ);
-      j++;
-    }
-  }
-
-  while (i <= mid) {
-    unchecked(dst[k++] = unchecked(src[i++]));
-  }
-  while (j <= right) {
-    unchecked(dst[k++] = unchecked(src[j++]));
-  }
-}
-
 // Step 2a: Sweep & Prune Sort
 export function runBroadphaseSort(sortType: i32): void {
   const localIndices = indices;
@@ -295,11 +206,6 @@ export function runBroadphaseSweep(): i32 {
   return pairCount;
 }
 
-// Step 2: Sweep & Prune Broadphase
-export function runBroadphase(sortType: i32): i32 {
-  runBroadphaseSort(sortType);
-  return runBroadphaseSweep();
-}
 
 // Step 3: Narrowphase Physics Solver
 export function resolvePhysics(pairCount: i32): i32 {
@@ -394,6 +300,96 @@ export function update(
   sortType: i32
 ): i32 {
   updateMovement(width, height, speedMultiplier, behavior, seed);
-  const pairCount = runBroadphase(sortType);
+  runBroadphaseSort(sortType);
+  const pairCount = runBroadphaseSweep();
   return resolvePhysics(pairCount);
+}
+
+// Insertion Sort range helper
+function insertionSortRange(left: i32, right: i32): void {
+  const localIndices = indices;
+  const localPosX = posX;
+  for (let i = left + 1; i <= right; i++) {
+    const currIdx = unchecked(localIndices[i]);
+    const currX = unchecked(localPosX[currIdx]);
+    let j = i - 1;
+    while (j >= left) {
+      const prevIdx = unchecked(localIndices[j]);
+      if (unchecked(localPosX[prevIdx]) <= currX) break;
+      unchecked(localIndices[j + 1] = prevIdx);
+      j--;
+    }
+    unchecked(localIndices[j + 1] = currIdx);
+  }
+}
+
+// Quick Sort
+function quickSort(left: i32, right: i32): void {
+  if (right - left < 12) {
+    insertionSortRange(left, right);
+    return;
+  }
+  const pivotIdx = partition(left, right);
+  quickSort(left, pivotIdx - 1);
+  quickSort(pivotIdx + 1, right);
+}
+
+function partition(left: i32, right: i32): i32 {
+  const mid = (left + right) >> 1;
+  const tempMid = unchecked(indices[mid]);
+  unchecked(indices[mid] = indices[right]);
+  unchecked(indices[right] = tempMid);
+
+  const pivotVal = unchecked(posX[indices[right]]);
+  let i = left - 1;
+  for (let j = left; j < right; j++) {
+    if (unchecked(posX[indices[j]]) < pivotVal) {
+      i++;
+      const temp = unchecked(indices[i]);
+      unchecked(indices[i] = indices[j]);
+      unchecked(indices[j] = temp);
+    }
+  }
+  const temp = unchecked(indices[i + 1]);
+  unchecked(indices[i + 1] = indices[right]);
+  unchecked(indices[right] = temp);
+  return i + 1;
+}
+
+// Merge Sort (Ping-Pong / Double-Buffering)
+function mergeSortPingPongRec(src: StaticArray<i32>, dst: StaticArray<i32>, left: i32, right: i32): void {
+  if (right - left < 12) {
+    insertionSortRange(left, right);
+    for (let m = left; m <= right; m++) {
+      unchecked(src[m] = dst[m]);
+    }
+    return;
+  }
+  
+  const mid = (left + right) >> 1;
+  mergeSortPingPongRec(dst, src, left, mid);
+  mergeSortPingPongRec(dst, src, mid + 1, right);
+  
+  let i = left;
+  let j = mid + 1;
+  let k = left;
+
+  while (i <= mid && j <= right) {
+    const idxI = unchecked(src[i]);
+    const idxJ = unchecked(src[j]);
+    if (unchecked(posX[idxI]) <= unchecked(posX[idxJ])) {
+      unchecked(dst[k++] = idxI);
+      i++;
+    } else {
+      unchecked(dst[k++] = idxJ);
+      j++;
+    }
+  }
+
+  while (i <= mid) {
+    unchecked(dst[k++] = unchecked(src[i++]));
+  }
+  while (j <= right) {
+    unchecked(dst[k++] = unchecked(src[j++]));
+  }
 }

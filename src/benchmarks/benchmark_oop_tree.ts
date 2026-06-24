@@ -426,6 +426,91 @@ function queryOverlapIter(
   }
 }
 
+
+export function updateMovement(
+  entities: TreeGameEntity[],
+  canvasWidth: number,
+  canvasHeight: number,
+  speedMultiplier: number,
+  behavior: string,
+  prng: SeededPRNG,
+  outMoveBuffer: TreeGameEntity[]
+) {
+  const len = entities.length;
+  outMoveBuffer.length = 0; // Clear it
+
+  if (behavior === 'wander') {
+    for (let i = 0; i < len; i++) {
+      const entity = entities[i];
+      entity.angle += (prng.next() - 0.5) * 0.4;
+      entity.vx = Math.cos(entity.angle) * 1.2 * speedMultiplier;
+      entity.vy = Math.sin(entity.angle) * 1.2 * speedMultiplier;
+
+      entity.x += entity.vx;
+      entity.y += entity.vy;
+
+      let bounced = false;
+
+      if (entity.x < 0) {
+        entity.x = 0;
+        entity.angle = Math.PI - entity.angle;
+        bounced = true;
+      } else if (entity.x + entity.w > canvasWidth) {
+        entity.x = canvasWidth - entity.w;
+        entity.angle = Math.PI - entity.angle;
+        bounced = true;
+      }
+
+      if (entity.y < 0) {
+        entity.y = 0;
+        entity.angle = -entity.angle;
+        bounced = true;
+      } else if (entity.y + entity.h > canvasHeight) {
+        entity.y = canvasHeight - entity.h;
+        entity.angle = -entity.angle;
+        bounced = true;
+      }
+
+      if (bounced) {
+        entity.vx = Math.cos(entity.angle) * 1.2 * speedMultiplier;
+        entity.vy = Math.sin(entity.angle) * 1.2 * speedMultiplier;
+      }
+
+      // Check bounds: mark entity for re-insertion if it escapes its cached leaf bounds
+      const leaf = entity.leaf;
+      if (leaf) {
+        const minX = entity.x;
+        const minY = entity.y;
+        const maxX = entity.x + entity.w;
+        const maxY = entity.y + entity.h;
+        if (minX < leaf.aabb.minX || maxX > leaf.aabb.maxX ||
+            minY < leaf.aabb.minY || maxY > leaf.aabb.maxY) {
+          outMoveBuffer.push(entity);
+        }
+      }
+    }
+  } else if (behavior === 'erratic') {
+    for (let i = 0; i < len; i++) {
+      const entity = entities[i];
+      entity.x = prng.next() * (canvasWidth - entity.w);
+      entity.y = prng.next() * (canvasHeight - entity.h);
+
+      // Check bounds
+      const leaf = entity.leaf;
+      if (leaf) {
+        const minX = entity.x;
+        const minY = entity.y;
+        const maxX = entity.x + entity.w;
+        const maxY = entity.y + entity.h;
+        if (minX < leaf.aabb.minX || maxX > leaf.aabb.maxX ||
+            minY < leaf.aabb.minY || maxY > leaf.aabb.maxY) {
+          outMoveBuffer.push(entity);
+        }
+      }
+    }
+  }
+}
+
 export function runBroadphase(
   root: TreeNode | null,
   outPairsBuffer: Int32Array
@@ -538,93 +623,6 @@ export function resolveCollisions(
 
   return collisionCount;
 }
-
-export function updateMovement(
-  entities: TreeGameEntity[],
-  canvasWidth: number,
-  canvasHeight: number,
-  speedMultiplier: number,
-  behavior: string,
-  prng: SeededPRNG,
-  outMoveBuffer: TreeGameEntity[]
-) {
-  const len = entities.length;
-  outMoveBuffer.length = 0; // Clear it
-
-  if (behavior === 'wander') {
-    for (let i = 0; i < len; i++) {
-      const entity = entities[i];
-      entity.angle += (prng.next() - 0.5) * 0.4;
-      entity.vx = Math.cos(entity.angle) * 1.2 * speedMultiplier;
-      entity.vy = Math.sin(entity.angle) * 1.2 * speedMultiplier;
-
-      entity.x += entity.vx;
-      entity.y += entity.vy;
-
-      let bounced = false;
-
-      if (entity.x < 0) {
-        entity.x = 0;
-        entity.angle = Math.PI - entity.angle;
-        bounced = true;
-      } else if (entity.x + entity.w > canvasWidth) {
-        entity.x = canvasWidth - entity.w;
-        entity.angle = Math.PI - entity.angle;
-        bounced = true;
-      }
-
-      if (entity.y < 0) {
-        entity.y = 0;
-        entity.angle = -entity.angle;
-        bounced = true;
-      } else if (entity.y + entity.h > canvasHeight) {
-        entity.y = canvasHeight - entity.h;
-        entity.angle = -entity.angle;
-        bounced = true;
-      }
-
-      if (bounced) {
-        entity.vx = Math.cos(entity.angle) * 1.2 * speedMultiplier;
-        entity.vy = Math.sin(entity.angle) * 1.2 * speedMultiplier;
-      }
-
-      // Check bounds: mark entity for re-insertion if it escapes its cached leaf bounds
-      const leaf = entity.leaf;
-      if (leaf) {
-        const minX = entity.x;
-        const minY = entity.y;
-        const maxX = entity.x + entity.w;
-        const maxY = entity.y + entity.h;
-        if (minX < leaf.aabb.minX || maxX > leaf.aabb.maxX ||
-            minY < leaf.aabb.minY || maxY > leaf.aabb.maxY) {
-          outMoveBuffer.push(entity);
-        }
-      }
-    }
-  } else if (behavior === 'erratic') {
-    for (let i = 0; i < len; i++) {
-      const entity = entities[i];
-      entity.x = prng.next() * (canvasWidth - entity.w);
-      entity.y = prng.next() * (canvasHeight - entity.h);
-
-      // Check bounds
-      const leaf = entity.leaf;
-      if (leaf) {
-        const minX = entity.x;
-        const minY = entity.y;
-        const maxX = entity.x + entity.w;
-        const maxY = entity.y + entity.h;
-        if (minX < leaf.aabb.minX || maxX > leaf.aabb.maxX ||
-            minY < leaf.aabb.minY || maxY > leaf.aabb.maxY) {
-          outMoveBuffer.push(entity);
-        }
-      }
-    }
-  }
-}
-
-
-
 
 /**
  * Simulator representing an OOP model using a dynamic AABB Tree for broadphase.

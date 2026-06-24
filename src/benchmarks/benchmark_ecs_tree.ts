@@ -453,71 +453,6 @@ function queryOverlapFlatIter(
   }
 }
 
-/**
- * Timed broadphase function that starts tree queries and fills pairs buffer.
- * Fully iterative implementation using pre-allocated stacks.
- */
-export function runBroadphase(
-  tree: FlatAABBTree,
-  posX: Float64Array,
-  posYwh: Float64Array,
-  outPairsBuffer: Int32Array
-): number {
-  let pairCount = 0;
-  if (tree.root === -1 || tree.left[tree.root] === -1) return 0;
-
-  let stackPtr = 0;
-  mainStack[0] = tree.root;
-  stackPtr = 1;
-
-  const left = tree.left;
-  const right = tree.right;
-
-  while (stackPtr > 0) {
-    stackPtr--;
-    const node = mainStack[stackPtr];
-
-    queryOverlapFlatIter(tree, left[node], right[node], (leafA, leafB) => {
-      // Leaf node index to entity ID
-      const entityA = tree.entity[leafA];
-      const entityB = tree.entity[leafB];
-
-      const ax = posX[entityA];
-      const ay = posYwh[entityA * 3 + 0];
-      const aw = posYwh[entityA * 3 + 1];
-      const ah = posYwh[entityA * 3 + 2];
-
-      const bx = posX[entityB];
-      const by = posYwh[entityB * 3 + 0];
-      const bw = posYwh[entityB * 3 + 1];
-      const bh = posYwh[entityB * 3 + 2];
-
-      if (ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by) {
-        if (pairCount * 2 + 1 < outPairsBuffer.length) {
-          outPairsBuffer[pairCount * 2] = entityA;
-          outPairsBuffer[pairCount * 2 + 1] = entityB;
-          pairCount++;
-        }
-      }
-    });
-
-    const leftChild = left[node];
-    const rightChild = right[node];
-
-    if (left[leftChild] !== -1) {
-      if (stackPtr + 1 > mainStack.length) throw new Error("FlatAABBTree: Main stack overflow");
-      mainStack[stackPtr] = leftChild;
-      stackPtr++;
-    }
-    if (left[rightChild] !== -1) {
-      if (stackPtr + 1 > mainStack.length) throw new Error("FlatAABBTree: Main stack overflow");
-      mainStack[stackPtr] = rightChild;
-      stackPtr++;
-    }
-  }
-
-  return pairCount;
-}
 
 /**
  * Updates coordinates sequentially in flat TypedArrays.
@@ -616,6 +551,73 @@ export function updateMovement(
     }
   }
 }
+
+/**
+ * Timed broadphase function that starts tree queries and fills pairs buffer.
+ * Fully iterative implementation using pre-allocated stacks.
+ */
+export function runBroadphase(
+  tree: FlatAABBTree,
+  posX: Float64Array,
+  posYwh: Float64Array,
+  outPairsBuffer: Int32Array
+): number {
+  let pairCount = 0;
+  if (tree.root === -1 || tree.left[tree.root] === -1) return 0;
+
+  let stackPtr = 0;
+  mainStack[0] = tree.root;
+  stackPtr = 1;
+
+  const left = tree.left;
+  const right = tree.right;
+
+  while (stackPtr > 0) {
+    stackPtr--;
+    const node = mainStack[stackPtr];
+
+    queryOverlapFlatIter(tree, left[node], right[node], (leafA, leafB) => {
+      // Leaf node index to entity ID
+      const entityA = tree.entity[leafA];
+      const entityB = tree.entity[leafB];
+
+      const ax = posX[entityA];
+      const ay = posYwh[entityA * 3 + 0];
+      const aw = posYwh[entityA * 3 + 1];
+      const ah = posYwh[entityA * 3 + 2];
+
+      const bx = posX[entityB];
+      const by = posYwh[entityB * 3 + 0];
+      const bw = posYwh[entityB * 3 + 1];
+      const bh = posYwh[entityB * 3 + 2];
+
+      if (ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by) {
+        if (pairCount * 2 + 1 < outPairsBuffer.length) {
+          outPairsBuffer[pairCount * 2] = entityA;
+          outPairsBuffer[pairCount * 2 + 1] = entityB;
+          pairCount++;
+        }
+      }
+    });
+
+    const leftChild = left[node];
+    const rightChild = right[node];
+
+    if (left[leftChild] !== -1) {
+      if (stackPtr + 1 > mainStack.length) throw new Error("FlatAABBTree: Main stack overflow");
+      mainStack[stackPtr] = leftChild;
+      stackPtr++;
+    }
+    if (left[rightChild] !== -1) {
+      if (stackPtr + 1 > mainStack.length) throw new Error("FlatAABBTree: Main stack overflow");
+      mainStack[stackPtr] = rightChild;
+      stackPtr++;
+    }
+  }
+
+  return pairCount;
+}
+
 
 /**
  * Re-inserts moved tree leaves and performs incremental optimizations.
