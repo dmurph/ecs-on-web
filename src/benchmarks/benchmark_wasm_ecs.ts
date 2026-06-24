@@ -1,6 +1,6 @@
 import { ENTITY_COLORS, SortMethod } from '../config';
 import { SeededPRNG } from '../prng';
-import type { Simulator, EntityState } from '../simulator';
+import type { Simulator, EntityState, RenderEntity } from '../simulator';
 import type { ECSData } from './benchmark_custom_ecs';
 
 // Fetch and compile WebAssembly module synchronously/top-level await
@@ -14,6 +14,7 @@ export class WasmECSSimulator implements Simulator {
   private wasm: any = null;
   private ecsData: ECSData | null = null;
   private times: number[] = [];
+  private renderEntities: RenderEntity[] = [];
 
   constructor(
     sortMethod: SortMethod = SortMethod.Insertion
@@ -49,6 +50,10 @@ export class WasmECSSimulator implements Simulator {
     const id = new Int32Array(memoryBuffer, this.wasm.getIdPtr(), numEntities);
 
     this.ecsData = { posX, posYwh, colorId, angle, vx, vy, indices, id };
+    this.renderEntities = new Array(numEntities);
+    for (let i = 0; i < numEntities; i++) {
+      this.renderEntities[i] = { id: i, x: 0, y: 0, w: 0, h: 0, color: '' };
+    }
   }
 
   update(
@@ -83,8 +88,19 @@ export class WasmECSSimulator implements Simulator {
     return { time, collisionCount };
   }
 
-  getRenderData() {
-    return { data: this.ecsData, mode: 'ecs' as const, count: this.ecsData ? this.ecsData.posX.length : 0 };
+  getRenderEntities(): RenderEntity[] {
+    if (!this.ecsData) return [];
+    const len = this.ecsData.posX.length;
+    for (let i = 0; i < len; i++) {
+      const r = this.renderEntities[i];
+      r.id = this.ecsData.id[i];
+      r.x = this.ecsData.posX[i];
+      r.y = this.ecsData.posYwh[i * 3 + 0];
+      r.w = this.ecsData.posYwh[i * 3 + 1];
+      r.h = this.ecsData.posYwh[i * 3 + 2];
+      r.color = ENTITY_COLORS[this.ecsData.colorId[i]];
+    }
+    return this.renderEntities;
   }
 
   getTimes() {

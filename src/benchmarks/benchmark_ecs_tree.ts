@@ -1,6 +1,6 @@
 import { ENTITY_COLORS, ENTITY_MAX_SPEED, TREE_REBALANCE_FRAME_INTERVAL, TREE_REBALANCE_PERCENTAGE } from '../config';
 import { SeededPRNG } from '../prng';
-import type { Simulator, EntityState } from '../simulator';
+import type { Simulator, EntityState, RenderEntity } from '../simulator';
 import type { ECSData } from './benchmark_custom_ecs';
 
 /**
@@ -763,6 +763,7 @@ export class ECSTreeSimulator implements Simulator {
   private maxCollisions = 200000;
   private frameCount = 0;
   private movedFrameCount = 0;
+  private renderEntities: RenderEntity[] = [];
 
   init(numEntities: number, _width: number, _height: number, _prng: SeededPRNG) {
     // 1. Spawns standard SoA component arrays
@@ -808,6 +809,10 @@ export class ECSTreeSimulator implements Simulator {
 
     this.colliding = new Uint8Array(numEntities);
     this.pairsBuffer = new Int32Array(this.maxCollisions * 2);
+    this.renderEntities = new Array(numEntities);
+    for (let i = 0; i < numEntities; i++) {
+      this.renderEntities[i] = { id: i, x: 0, y: 0, w: 0, h: 0, color: '' };
+    }
     this.frameCount = 0;
     this.movedFrameCount = 0;
   }
@@ -883,8 +888,19 @@ export class ECSTreeSimulator implements Simulator {
     return { time, collisionCount };
   }
 
-  getRenderData() {
-    return { data: this.ecsData, mode: 'ecs' as const, count: this.ecsData ? this.ecsData.posX.length : 0 };
+  getRenderEntities(): RenderEntity[] {
+    if (!this.ecsData) return [];
+    const len = this.ecsData.posX.length;
+    for (let i = 0; i < len; i++) {
+      const r = this.renderEntities[i];
+      r.id = this.ecsData.id[i];
+      r.x = this.ecsData.posX[i];
+      r.y = this.ecsData.posYwh[i * 3 + 0];
+      r.w = this.ecsData.posYwh[i * 3 + 1];
+      r.h = this.ecsData.posYwh[i * 3 + 2];
+      r.color = ENTITY_COLORS[this.ecsData.colorId[i]];
+    }
+    return this.renderEntities;
   }
 
   getTimes() { return this.times; }

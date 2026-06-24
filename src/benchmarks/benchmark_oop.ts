@@ -1,6 +1,6 @@
 import { ENTITY_COLORS, ENTITY_MAX_SPEED, SortMethod } from '../config';
-import { SeededPRNG } from '../prng';
-import type { Simulator, EntityState } from '../simulator';
+import type { SeededPRNG } from '../prng';
+import type { Simulator, EntityState, RenderEntity } from '../simulator';
 
 // === INTERNAL SORTING ALGORITHMS ===
 function insertionSortRangeOOP(entities: GameEntity[], left: number, right: number) {
@@ -366,8 +366,8 @@ export class OOPSimulator implements Simulator {
     return { time, collisionCount };
   }
 
-  getRenderData() {
-    return { data: this.entities, mode: 'oop' as const, count: this.entities.length };
+  getRenderEntities(): RenderEntity[] {
+    return this.entities;
   }
 
   getTimes() { return this.times; }

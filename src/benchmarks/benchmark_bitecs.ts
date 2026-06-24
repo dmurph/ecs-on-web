@@ -1,7 +1,7 @@
 import { addEntity, addComponent, createWorld, query } from 'bitecs';
 import { SeededPRNG } from '../prng';
 import { ENTITY_COLORS, ENTITY_MAX_SPEED } from '../config';
-import type { Simulator, EntityState } from '../simulator';
+import type { Simulator, EntityState, RenderEntity } from '../simulator';
 // Helper: Insertion sort over a range for subarrays
 function insertionSortRangeBitecs(entities: Int32Array, posX: Float64Array, left: number, right: number) {
   for (let i = left + 1; i <= right; i++) {
@@ -336,6 +336,7 @@ export class BitECSSimulator implements Simulator {
   private times: number[] = [];
   private pairsBuffer = new Int32Array(0);
   private maxCollisions = 200000;
+  private renderEntities: RenderEntity[] = [];
 
   constructor(
     sortType: 'insertion' | 'quick' | 'merge' | 'native' = 'insertion'
@@ -350,6 +351,10 @@ export class BitECSSimulator implements Simulator {
     this.tempEntities = new Int32Array(numEntities);
     
     this.pairsBuffer = new Int32Array(this.maxCollisions * 2);
+    this.renderEntities = new Array(numEntities);
+    for (let i = 0; i < numEntities; i++) {
+      this.renderEntities[i] = { id: i, x: 0, y: 0, w: 0, h: 0, color: '' };
+    }
   }
 
   update(width: number, height: number, speedMultiplier: number, behavior: string, prng: SeededPRNG): { time: number, collisionCount: number } {
@@ -367,12 +372,21 @@ export class BitECSSimulator implements Simulator {
     return { time, collisionCount };
   }
 
-  getRenderData() {
-    return {
-      data: this.store,
-      mode: 'bitecs' as const,
-      count: this.store ? this.store.entities.length : 0
-    };
+  getRenderEntities(): RenderEntity[] {
+    if (!this.store) return [];
+    const { PositionX, PositionYwh, Style, entities } = this.store;
+    const len = entities.length;
+    for (let i = 0; i < len; i++) {
+      const eid = entities[i];
+      const r = this.renderEntities[i];
+      r.id = eid;
+      r.x = PositionX.value[eid];
+      r.y = PositionYwh.y[eid];
+      r.w = PositionYwh.w[eid];
+      r.h = PositionYwh.h[eid];
+      r.color = ENTITY_COLORS[Style.colorId[eid]];
+    }
+    return this.renderEntities;
   }
 
   getTimes() { return this.times; }

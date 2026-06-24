@@ -1,63 +1,9 @@
-import { ENTITY_COLORS } from './config';
-import { GameEntity } from './benchmarks/benchmark_oop';
-import type { ECSData } from './benchmarks/benchmark_custom_ecs';
-import type { BitecsStore } from './benchmarks/benchmark_bitecs';
-
-interface RenderEntity {
-  id: number;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  color: string;
-}
-
-function getRenderEntity(
-  data: any,
-  i: number,
-  mode: 'oop' | 'oop-tree' | 'ecs' | 'bitecs'
-): RenderEntity {
-  if (mode === 'oop' || mode === 'oop-tree') {
-    const e = (data as GameEntity[])[i];
-    return {
-      id: e.id,
-      x: e.x,
-      y: e.y,
-      w: e.w,
-      h: e.h,
-      color: e.color
-    };
-  } else if (mode === 'ecs') {
-    const ecs = data as ECSData;
-    const id = ecs.id[i];
-    return {
-      id,
-      x: ecs.posX[i],
-      y: ecs.posYwh[i * 3 + 0],
-      w: ecs.posYwh[i * 3 + 1],
-      h: ecs.posYwh[i * 3 + 2],
-      color: ENTITY_COLORS[ecs.colorId[i]]
-    };
-  } else {
-    const store = data as BitecsStore;
-    const eid = store.entities[i];
-    return {
-      id: eid,
-      x: store.PositionX.value[eid],
-      y: store.PositionYwh.y[eid],
-      w: store.PositionYwh.w[eid],
-      h: store.PositionYwh.h[eid],
-      color: ENTITY_COLORS[store.Style.colorId[eid]]
-    };
-  }
-}
+import type { RenderEntity } from './simulator';
 
 export function renderCanvas(
   canvas: HTMLCanvasElement,
   ctx: CanvasRenderingContext2D,
-  data: any,
-  mode: 'oop' | 'oop-tree' | 'ecs' | 'bitecs',
-  numEntities: number
+  entities: RenderEntity[]
 ) {
   const w = canvas.width;
   const h = canvas.height;
@@ -83,9 +29,9 @@ export function renderCanvas(
 
   const fillOpacity = 'cc'; 
 
-  // 1. Draw entities
-  for (let i = 0; i < numEntities; i++) {
-    const entity = getRenderEntity(data, i, mode);
+  // Draw entities
+  for (let i = 0; i < entities.length; i++) {
+    const entity = entities[i];
 
     ctx.fillStyle = entity.color + fillOpacity;
 

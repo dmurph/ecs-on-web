@@ -1,6 +1,6 @@
 import { GameEntity } from './benchmark_oop';
 import { SeededPRNG } from '../prng';
-import type { Simulator, EntityState } from '../simulator';
+import type { Simulator, EntityState, RenderEntity } from '../simulator';
 import { ENTITY_MAX_SPEED, TREE_REBALANCE_FRAME_INTERVAL, TREE_REBALANCE_PERCENTAGE } from '../config';
 
 export class TreeNode {
@@ -718,8 +718,8 @@ export class OOPTreeSimulator implements Simulator {
     return { time, collisionCount };
   }
 
-  getRenderData() {
-    return { data: this.entities, mode: 'oop-tree' as const, count: this.entities.length };
+  getRenderEntities(): RenderEntity[] {
+    return this.entities;
   }
 
   getTimes() { return this.times; }

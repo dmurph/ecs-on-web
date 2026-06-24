@@ -16,6 +16,15 @@ export interface EntityState {
   color: string;
 }
 
+export interface RenderEntity {
+  id: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  color: string;
+}
+
 /**
  * Core interface that all benchmark simulators must implement.
  * Allows the orchestrator loop in `main.ts` to execute, render, and benchmark
@@ -55,15 +64,11 @@ export interface Simulator {
     behavior: string,
     prng: SeededPRNG
   ): { time: number, collisionCount: number };
-  
+
   /**
-   * Returns rendering data, mode, and count.
+   * Returns rendering entity list.
    */
-  getRenderData(): {
-    data: any;
-    mode: 'oop' | 'oop-tree' | 'ecs' | 'bitecs';
-    count: number;
-  };
+  getRenderEntities(): RenderEntity[];
   
   /**
    * Returns the list of recorded step execution times (ms) since the benchmark start.

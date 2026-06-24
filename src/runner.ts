@@ -146,9 +146,9 @@ export class BenchmarkRunner {
     for (const sim of this.activeSimulators) {
       const ctx = this.contexts[sim.id];
       if (ctx) {
-        const { data, mode, count } = sim.instance.getRenderData();
-        if (data && count > 0) {
-          renderCanvas(ctx.canvas, ctx, data, mode, count);
+        const entities = sim.instance.getRenderEntities();
+        if (entities.length > 0) {
+          renderCanvas(ctx.canvas, ctx, entities);
         }
       }
     }
@@ -279,9 +279,9 @@ export class BenchmarkRunner {
     for (const sim of this.activeSimulators) {
       const ctx = this.contexts[sim.id];
       if (ctx) {
-        const { data, mode, count } = sim.instance.getRenderData();
-        if (data && count > 0) {
-          renderCanvas(ctx.canvas, ctx, data, mode, count);
+        const entities = sim.instance.getRenderEntities();
+        if (entities.length > 0) {
+          renderCanvas(ctx.canvas, ctx, entities);
         }
       }
     }
