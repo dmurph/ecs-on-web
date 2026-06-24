@@ -317,7 +317,6 @@ export class OOPSimulator implements Simulator {
   private colliding = new Uint8Array(0);
   private pairsBuffer = new Int32Array(0);
   private maxCollisions = 200000;
-  private lastCollisionCount = 0;
 
   constructor(
     sortMethod: SortMethod = SortMethod.Insertion
@@ -343,7 +342,6 @@ export class OOPSimulator implements Simulator {
     
     this.colliding = new Uint8Array(numEntities);
     this.pairsBuffer = new Int32Array(this.maxCollisions * 2);
-    this.lastCollisionCount = 0;
   }
 
   /**
@@ -361,19 +359,19 @@ export class OOPSimulator implements Simulator {
     runBroadphase(this.entities, this.sortMethod, this.tempEntities);
     
     this.colliding.fill(0);
-    this.lastCollisionCount = resolveCollisions(this.entities, this.colliding, this.pairsBuffer);
+    const collisionCount = resolveCollisions(this.entities, this.colliding, this.pairsBuffer);
     
     const end = performance.now();
     const time = end - start;
     this.times.push(time);
-    return { time, collisionCount: this.lastCollisionCount };
+    return { time, collisionCount };
   }
 
   /**
    * Renders the current visual state of the entities and contacts.
    */
   render(ctx: CanvasRenderingContext2D) {
-    renderCanvas(ctx.canvas, ctx, this.entities, this.colliding, 'oop', this.pairsBuffer, this.lastCollisionCount, this.entities.length, this.entitiesById);
+    renderCanvas(ctx.canvas, ctx, this.entities, this.colliding, 'oop', this.entities.length);
   }
 
   getTimes() { return this.times; }

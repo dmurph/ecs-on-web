@@ -24,6 +24,7 @@ let CustomECSSimulator: any;
 let ECSTreeSimulator: any;
 let BitECSSimulator: any;
 let WasmECSSimulator: any;
+let WasmTreeSimulator: any;
 let SeededPRNG: any;
 let SortMethod: any;
 
@@ -55,7 +56,8 @@ async function runBenchmarkForBehavior(numEntities: number, behavior: 'wander' |
     
     { instance: new WasmECSSimulator(SortMethod.Insertion), name: 'WASM ECS S&P (Insertion)' },
     { instance: new WasmECSSimulator(SortMethod.Quick), name: 'WASM ECS S&P (Quick)' },
-    { instance: new WasmECSSimulator(SortMethod.Merge), name: 'WASM ECS S&P (Merge)' }
+    { instance: new WasmECSSimulator(SortMethod.Merge), name: 'WASM ECS S&P (Merge)' },
+    { instance: new WasmTreeSimulator(), name: 'WASM Tree' }
   ];
 
   // Initialize and get initial positions from OOP simulator to sync all of them
@@ -141,6 +143,9 @@ async function start() {
 
   const wasmEcsModule = await import('../src/benchmarks/benchmark_wasm_ecs');
   WasmECSSimulator = wasmEcsModule.WasmECSSimulator;
+
+  const wasmTreeModule = await import('../src/benchmarks/benchmark_wasm_tree');
+  WasmTreeSimulator = wasmTreeModule.WasmTreeSimulator;
 
   const prngModule = await import('../src/prng');
   SeededPRNG = prngModule.SeededPRNG;

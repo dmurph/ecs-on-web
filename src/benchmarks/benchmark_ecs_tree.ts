@@ -772,8 +772,6 @@ export class ECSTreeSimulator implements Simulator {
   private colliding = new Uint8Array(0);
   private pairsBuffer = new Int32Array(0);
   private maxCollisions = 200000;
-  private lastCollisionCount = 0;
-  private pairsCount = 0;
   private frameCount = 0;
   private movedFrameCount = 0;
 
@@ -821,15 +819,13 @@ export class ECSTreeSimulator implements Simulator {
 
     this.colliding = new Uint8Array(numEntities);
     this.pairsBuffer = new Int32Array(this.maxCollisions * 2);
-    this.lastCollisionCount = 0;
-    this.pairsCount = 0;
     this.frameCount = 0;
     this.movedFrameCount = 0;
   }
 
   update(width: number, height: number, speedMultiplier: number, behavior: string, prng: SeededPRNG): { time: number, collisionCount: number } {
     const start = performance.now();
-    this.pairsCount = 0;
+    let collisionCount = 0;
 
     if (this.ecsData && this.tree) {
       // 1. Move System
@@ -870,7 +866,7 @@ export class ECSTreeSimulator implements Simulator {
       );
 
       // 3. Flat Tree Broadphase
-      this.pairsCount = runBroadphase(
+      const pairsCount = runBroadphase(
         this.tree,
         this.ecsData.posX,
         this.ecsData.posYwh,
@@ -879,14 +875,14 @@ export class ECSTreeSimulator implements Simulator {
 
       // 4. ECS Narrowphase
       this.colliding.fill(0);
-      this.lastCollisionCount = resolveCollisions(
+      collisionCount = resolveCollisions(
         this.ecsData.posX,
         this.ecsData.posYwh,
         this.ecsData.vx,
         this.ecsData.vy,
         this.ecsData.angle,
         this.pairsBuffer,
-        this.pairsCount,
+        pairsCount,
         this.colliding
       );
     }
@@ -895,12 +891,12 @@ export class ECSTreeSimulator implements Simulator {
     const time = end - start;
     this.times.push(time);
     this.frameCount++;
-    return { time, collisionCount: this.lastCollisionCount };
+    return { time, collisionCount };
   }
 
   render(ctx: CanvasRenderingContext2D) {
     if (this.ecsData) {
-      renderCanvas(ctx.canvas, ctx, this.ecsData, this.colliding, 'ecs', this.pairsBuffer, this.pairsCount, this.ecsData.posX.length);
+      renderCanvas(ctx.canvas, ctx, this.ecsData, this.colliding, 'ecs', this.ecsData.posX.length);
     }
   }
 

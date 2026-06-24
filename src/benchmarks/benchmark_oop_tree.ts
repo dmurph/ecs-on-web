@@ -658,7 +658,6 @@ export class OOPTreeSimulator implements Simulator {
   private colliding = new Uint8Array(0);
   private pairsBuffer = new Int32Array(0);
   private maxCollisions = 200000;
-  private lastCollisionCount = 0;
   private frameCount = 0;
   private movedFrameCount = 0;
 
@@ -694,7 +693,6 @@ export class OOPTreeSimulator implements Simulator {
     this.colliding = new Uint8Array(numEntities);
     this.pairsBuffer = new Int32Array(this.maxCollisions * 2);
     this.moveBuffer = [];
-    this.lastCollisionCount = 0;
     this.frameCount = 0;
     this.movedFrameCount = 0;
   }
@@ -711,6 +709,7 @@ export class OOPTreeSimulator implements Simulator {
    */
   update(width: number, height: number, speedMultiplier: number, behavior: string, prng: SeededPRNG): { time: number, collisionCount: number } {
     const start = performance.now();
+    let collisionCount = 0;
     if (this.tree) {
       this.moveBuffer = [];
       updateMovement(this.entities, width, height, speedMultiplier, behavior, prng, this.moveBuffer);
@@ -721,20 +720,20 @@ export class OOPTreeSimulator implements Simulator {
       const pairsCount = runBroadphase(this.tree.root, this.pairsBuffer);
       
       this.colliding.fill(0);
-      this.lastCollisionCount = resolveCollisions(this.entities, this.pairsBuffer, pairsCount, this.colliding);
+      collisionCount = resolveCollisions(this.entities, this.pairsBuffer, pairsCount, this.colliding);
     }
     const end = performance.now();
     const time = end - start;
     this.times.push(time);
     this.frameCount++;
-    return { time, collisionCount: this.lastCollisionCount };
+    return { time, collisionCount };
   }
 
   /**
    * Renders the dynamic AABB tree simulation.
    */
   render(ctx: CanvasRenderingContext2D) {
-    renderCanvas(ctx.canvas, ctx, this.entities, this.colliding, 'oop-tree', this.pairsBuffer, this.lastCollisionCount, this.entities.length, this.entitiesById);
+    renderCanvas(ctx.canvas, ctx, this.entities, this.colliding, 'oop-tree', this.entities.length);
   }
 
   getTimes() { return this.times; }

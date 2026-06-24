@@ -329,8 +329,6 @@ export class CustomECSSimulator implements Simulator {
   private colliding = new Uint8Array(0);
   private pairsBuffer = new Int32Array(0);
   private maxCollisions = 200000;
-  private lastCollisionCount = 0;
-  private pairsCount = 0;
 
   constructor(
     sortMethod: SortMethod = SortMethod.Insertion
@@ -346,8 +344,6 @@ export class CustomECSSimulator implements Simulator {
     this.tempIndices = new Int32Array(numEntities);
     this.colliding = new Uint8Array(numEntities);
     this.pairsBuffer = new Int32Array(this.maxCollisions * 2);
-    this.lastCollisionCount = 0;
-    this.pairsCount = 0;
   }
 
   /**
@@ -361,10 +357,10 @@ export class CustomECSSimulator implements Simulator {
    */
   update(width: number, height: number, speedMultiplier: number, behavior: string, prng: SeededPRNG): { time: number, collisionCount: number } {
     const start = performance.now();
-    this.pairsCount = 0;
+    let collisionCount = 0;
     if (this.ecsData) {
       updateMovement(this.ecsData, width, height, speedMultiplier, behavior, prng);
-      this.pairsCount = runBroadphase(
+      const pairsCount = runBroadphase(
         this.ecsData.indices,
         this.ecsData.posX,
         this.ecsData.posYwh,
@@ -375,12 +371,12 @@ export class CustomECSSimulator implements Simulator {
       );
       
       this.colliding.fill(0);
-      this.lastCollisionCount = resolveCollisions(this.ecsData, this.pairsBuffer, this.pairsCount, this.colliding);
+      collisionCount = resolveCollisions(this.ecsData, this.pairsBuffer, pairsCount, this.colliding);
     }
     const end = performance.now();
     const time = end - start;
     this.times.push(time);
-    return { time, collisionCount: this.lastCollisionCount };
+    return { time, collisionCount };
   }
 
   /**
@@ -388,7 +384,7 @@ export class CustomECSSimulator implements Simulator {
    */
   render(ctx: CanvasRenderingContext2D) {
     if (this.ecsData) {
-      renderCanvas(ctx.canvas, ctx, this.ecsData, this.colliding, 'ecs', this.pairsBuffer, this.lastCollisionCount, this.ecsData.posX.length);
+      renderCanvas(ctx.canvas, ctx, this.ecsData, this.colliding, 'ecs', this.ecsData.posX.length);
     }
   }
 

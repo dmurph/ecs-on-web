@@ -5,6 +5,7 @@ import { CustomECSSimulator } from './benchmarks/benchmark_custom_ecs';
 import { ECSTreeSimulator } from './benchmarks/benchmark_ecs_tree';
 import { WasmECSSimulator } from './benchmarks/benchmark_wasm_ecs';
 import { WasmTreeSimulator } from './benchmarks/benchmark_wasm_tree';
+import { BitECSSimulator } from './benchmarks/benchmark_bitecs';
 import { SortMethod } from './config';
 
 export interface SimulatorConfig {
@@ -85,6 +86,34 @@ export const SIMULATOR_REGISTRY: SimulatorConfig[] = [
     color: '#b45309',
     activeByDefault: true,
     createInstance: () => new ECSTreeSimulator()
+  },
+  {
+    id: 'bitecs',
+    name: 'BitECS S&P (Insertion)',
+    color: '#0284c7',
+    activeByDefault: true,
+    createInstance: () => new BitECSSimulator(SortMethod.Insertion)
+  },
+  {
+    id: 'bitecs-quick',
+    name: 'BitECS S&P (Quick)',
+    color: '#0369a1',
+    activeByDefault: false,
+    createInstance: () => new BitECSSimulator(SortMethod.Quick)
+  },
+  {
+    id: 'bitecs-merge',
+    name: 'BitECS S&P (Merge)',
+    color: '#075985',
+    activeByDefault: false,
+    createInstance: () => new BitECSSimulator(SortMethod.Merge)
+  },
+  {
+    id: 'bitecs-native',
+    name: 'BitECS S&P (Native)',
+    color: '#0c4a6e',
+    activeByDefault: false,
+    createInstance: () => new BitECSSimulator(SortMethod.Native)
   },
   {
     id: 'wasm',

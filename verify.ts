@@ -161,7 +161,7 @@ function runVerification() {
     updateOOPMovement(oopEntitiesById, w, h, 1.0, 'wander', prngOOP);
     updateOOPTreeMovement(oopTreeEntities, w, h, 1.0, 'wander', prngOOPTree, treeMoveBuffer);
     updateECSMovement(ecsData, w, h, 1.0, 'wander', prngECS);
-    updateBitecsMovement(bitecsEntities, w, h, 1.0, 'wander', prngBitecs);
+    updateBitecsMovement(bitecsWorld, w, h, 1.0, 'wander', prngBitecs);
 
     // Update AABB Tree
     updateTree(oopTree, oopTreeEntities, treeMoveBuffer, frame, prngOOPTree);

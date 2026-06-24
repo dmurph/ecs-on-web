@@ -16,8 +16,6 @@ export class WasmECSSimulator implements Simulator {
   private ecsData: ECSData | null = null;
   private times: number[] = [];
   private colliding = new Uint8Array(0);
-  private pairsBuffer = new Int32Array(0);
-  private lastCollisionCount = 0;
 
   constructor(
     sortMethod: SortMethod = SortMethod.Insertion
@@ -54,9 +52,6 @@ export class WasmECSSimulator implements Simulator {
 
     this.ecsData = { posX, posYwh, colorId, angle, vx, vy, indices, id };
     this.colliding = new Uint8Array(memoryBuffer, this.wasm.getCollidingPtr(), numEntities);
-    this.pairsBuffer = new Int32Array(memoryBuffer, this.wasm.getPairsBufferPtr(), maxCollisions * 2);
-
-    this.lastCollisionCount = 0;
   }
 
   update(
@@ -87,7 +82,6 @@ export class WasmECSSimulator implements Simulator {
     const end = performance.now();
     const time = end - start;
     this.times.push(time);
-    this.lastCollisionCount = collisionCount;
 
     return { time, collisionCount };
   }
@@ -100,8 +94,6 @@ export class WasmECSSimulator implements Simulator {
         this.ecsData,
         this.colliding,
         'ecs',
-        this.pairsBuffer,
-        this.lastCollisionCount,
         this.ecsData.posX.length
       );
     }
