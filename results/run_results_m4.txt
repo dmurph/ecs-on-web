@@ -1,0 +1,152 @@
+
+> ecs-experiment@0.0.0 benchmark
+> npm run asbuild && npx tsx scripts/run_benchmarks.ts
+
+
+> ecs-experiment@0.0.0 asbuild
+> asc src/benchmarks/assembly/index.ts -o public/benchmark_wasm_ecs.wasm -O --noAssert && asc src/benchmarks/assembly/tree.ts -o public/benchmark_wasm_tree.wasm -O --noAssert
+
+
+Running benchmark for: WANDER with 5000 entities...
+
+### Results for WANDER (5000 entities)
+| System | Avg Frame Time | 99th Percentile | Speedup vs OOP S&P (Insertion) |
+| :--- | :--- | :--- | :--- |
+| OOP S&P (Insertion) | 1.198 ms | 1.902 ms | 1.00x |
+| OOP S&P (Quick) | 1.189 ms | 1.895 ms | 1.01x |
+| OOP S&P (Merge) | 1.187 ms | 1.968 ms | 1.01x |
+| OOP S&P (Native) | 1.294 ms | 2.132 ms | 0.93x |
+| OOP Tree | 3.130 ms | 4.264 ms | 0.38x |
+| Custom ECS S&P (Insertion) | 0.831 ms | 0.936 ms | 1.44x |
+| Custom ECS S&P (Quick) | 0.845 ms | 0.886 ms | 1.42x |
+| Custom ECS S&P (Merge) | 0.825 ms | 0.883 ms | 1.45x |
+| Custom ECS S&P (Native) | 1.010 ms | 1.717 ms | 1.19x |
+| ECS Tree | 2.524 ms | 3.032 ms | 0.47x |
+| bitECS S&P (Insertion) | 0.910 ms | 1.517 ms | 1.32x |
+| bitECS S&P (Quick) | 0.961 ms | 1.630 ms | 1.25x |
+| bitECS S&P (Merge) | 0.978 ms | 1.161 ms | 1.23x |
+| bitECS S&P (Native) | 1.248 ms | 1.957 ms | 0.96x |
+| WASM ECS S&P (Insertion) | 0.315 ms | 0.340 ms | 3.80x |
+| WASM ECS S&P (Quick) | 0.369 ms | 0.392 ms | 3.25x |
+| WASM ECS S&P (Merge) | 0.322 ms | 0.339 ms | 3.72x |
+| WASM Tree | 2.305 ms | 2.737 ms | 0.52x |
+
+Running benchmark for: ERRATIC with 5000 entities...
+
+### Results for ERRATIC (5000 entities)
+| System | Avg Frame Time | 99th Percentile | Speedup vs OOP S&P (Insertion) |
+| :--- | :--- | :--- | :--- |
+| OOP S&P (Insertion) | 12.547 ms | 13.757 ms | 1.00x |
+| OOP S&P (Quick) | 1.472 ms | 1.603 ms | 8.52x |
+| OOP S&P (Merge) | 1.485 ms | 2.138 ms | 8.45x |
+| OOP S&P (Native) | 1.954 ms | 2.678 ms | 6.42x |
+| OOP Tree | 5.215 ms | 5.839 ms | 2.41x |
+| Custom ECS S&P (Insertion) | 4.675 ms | 6.356 ms | 2.68x |
+| Custom ECS S&P (Quick) | 1.046 ms | 1.089 ms | 12.00x |
+| Custom ECS S&P (Merge) | 1.098 ms | 1.193 ms | 11.43x |
+| Custom ECS S&P (Native) | 1.462 ms | 2.062 ms | 8.58x |
+| ECS Tree | 4.255 ms | 4.848 ms | 2.95x |
+| bitECS S&P (Insertion) | 4.295 ms | 5.048 ms | 2.92x |
+| bitECS S&P (Quick) | 1.046 ms | 1.078 ms | 12.00x |
+| bitECS S&P (Merge) | 1.086 ms | 1.149 ms | 11.56x |
+| bitECS S&P (Native) | 1.438 ms | 2.083 ms | 8.72x |
+| WASM ECS S&P (Insertion) | 3.384 ms | 3.639 ms | 3.71x |
+| WASM ECS S&P (Quick) | 0.455 ms | 0.480 ms | 27.60x |
+| WASM ECS S&P (Merge) | 0.298 ms | 0.310 ms | 42.17x |
+| WASM Tree | 4.392 ms | 4.565 ms | 2.86x |
+
+Running benchmark for: STATIC with 5000 entities...
+
+### Results for STATIC (5000 entities)
+| System | Avg Frame Time | 99th Percentile | Speedup vs OOP S&P (Insertion) |
+| :--- | :--- | :--- | :--- |
+| OOP S&P (Insertion) | 0.595 ms | 0.663 ms | 1.00x |
+| OOP S&P (Quick) | 0.656 ms | 0.706 ms | 0.91x |
+| OOP S&P (Merge) | 0.642 ms | 0.712 ms | 0.93x |
+| OOP S&P (Native) | 0.547 ms | 1.400 ms | 1.09x |
+| OOP Tree | 1.078 ms | 1.966 ms | 0.55x |
+| Custom ECS S&P (Insertion) | 0.417 ms | 0.441 ms | 1.43x |
+| Custom ECS S&P (Quick) | 0.437 ms | 0.462 ms | 1.36x |
+| Custom ECS S&P (Merge) | 0.437 ms | 0.459 ms | 1.36x |
+| Custom ECS S&P (Native) | 0.583 ms | 1.457 ms | 1.02x |
+| ECS Tree | 1.065 ms | 1.063 ms | 0.56x |
+| bitECS S&P (Insertion) | 0.420 ms | 0.466 ms | 1.42x |
+| bitECS S&P (Quick) | 0.423 ms | 0.454 ms | 1.41x |
+| bitECS S&P (Merge) | 0.420 ms | 0.445 ms | 1.42x |
+| bitECS S&P (Native) | 0.595 ms | 1.411 ms | 1.00x |
+| WASM ECS S&P (Insertion) | 0.141 ms | 0.154 ms | 4.23x |
+| WASM ECS S&P (Quick) | 0.190 ms | 0.201 ms | 3.13x |
+| WASM ECS S&P (Merge) | 0.183 ms | 0.192 ms | 3.25x |
+| WASM Tree | 0.837 ms | 0.869 ms | 0.71x |
+
+Running benchmark for: WANDER with 15000 entities...
+
+### Results for WANDER (15000 entities)
+| System | Avg Frame Time | 99th Percentile | Speedup vs OOP S&P (Insertion) |
+| :--- | :--- | :--- | :--- |
+| OOP S&P (Insertion) | 6.820 ms | 9.105 ms | 1.00x |
+| OOP S&P (Quick) | 7.737 ms | 9.857 ms | 0.88x |
+| OOP S&P (Merge) | 7.816 ms | 10.442 ms | 0.87x |
+| OOP S&P (Native) | 8.000 ms | 10.288 ms | 0.85x |
+| OOP Tree | 15.586 ms | 51.614 ms | 0.44x |
+| Custom ECS S&P (Insertion) | 4.485 ms | 4.653 ms | 1.52x |
+| Custom ECS S&P (Quick) | 4.671 ms | 5.010 ms | 1.46x |
+| Custom ECS S&P (Merge) | 4.782 ms | 5.268 ms | 1.43x |
+| Custom ECS S&P (Native) | 5.635 ms | 7.831 ms | 1.21x |
+| ECS Tree | 9.231 ms | 10.628 ms | 0.74x |
+| bitECS S&P (Insertion) | 4.735 ms | 5.334 ms | 1.44x |
+| bitECS S&P (Quick) | 4.849 ms | 5.235 ms | 1.41x |
+| bitECS S&P (Merge) | 5.010 ms | 5.653 ms | 1.36x |
+| bitECS S&P (Native) | 6.079 ms | 8.243 ms | 1.12x |
+| WASM ECS S&P (Insertion) | 1.543 ms | 1.720 ms | 4.42x |
+| WASM ECS S&P (Quick) | 1.778 ms | 1.981 ms | 3.84x |
+| WASM ECS S&P (Merge) | 1.369 ms | 1.579 ms | 4.98x |
+| WASM Tree | 8.503 ms | 9.726 ms | 0.80x |
+
+Running benchmark for: ERRATIC with 15000 entities...
+
+### Results for ERRATIC (15000 entities)
+| System | Avg Frame Time | 99th Percentile | Speedup vs OOP S&P (Insertion) |
+| :--- | :--- | :--- | :--- |
+| OOP S&P (Insertion) | 130.215 ms | 146.831 ms | 1.00x |
+| OOP S&P (Quick) | 8.386 ms | 11.203 ms | 15.53x |
+| OOP S&P (Merge) | 8.576 ms | 20.436 ms | 15.18x |
+| OOP S&P (Native) | 10.292 ms | 12.405 ms | 12.65x |
+| OOP Tree | 26.645 ms | 63.415 ms | 4.89x |
+| Custom ECS S&P (Insertion) | 41.133 ms | 54.564 ms | 3.17x |
+| Custom ECS S&P (Quick) | 5.346 ms | 6.090 ms | 24.36x |
+| Custom ECS S&P (Merge) | 5.690 ms | 7.888 ms | 22.88x |
+| Custom ECS S&P (Native) | 6.950 ms | 8.690 ms | 18.74x |
+| ECS Tree | 16.924 ms | 18.137 ms | 7.69x |
+| bitECS S&P (Insertion) | 36.033 ms | 41.897 ms | 3.61x |
+| bitECS S&P (Quick) | 5.305 ms | 6.008 ms | 24.54x |
+| bitECS S&P (Merge) | 5.579 ms | 6.068 ms | 23.34x |
+| bitECS S&P (Native) | 6.927 ms | 7.846 ms | 18.80x |
+| WASM ECS S&P (Insertion) | 32.079 ms | 35.198 ms | 4.06x |
+| WASM ECS S&P (Quick) | 2.092 ms | 2.233 ms | 62.24x |
+| WASM ECS S&P (Merge) | 1.335 ms | 1.384 ms | 97.57x |
+| WASM Tree | 16.653 ms | 17.853 ms | 7.82x |
+
+Running benchmark for: STATIC with 15000 entities...
+
+### Results for STATIC (15000 entities)
+| System | Avg Frame Time | 99th Percentile | Speedup vs OOP S&P (Insertion) |
+| :--- | :--- | :--- | :--- |
+| OOP S&P (Insertion) | 5.014 ms | 6.830 ms | 1.00x |
+| OOP S&P (Quick) | 5.271 ms | 7.166 ms | 0.95x |
+| OOP S&P (Merge) | 5.358 ms | 7.503 ms | 0.94x |
+| OOP S&P (Native) | 4.988 ms | 7.253 ms | 1.01x |
+| OOP Tree | 6.737 ms | 8.486 ms | 0.74x |
+| Custom ECS S&P (Insertion) | 3.217 ms | 3.389 ms | 1.56x |
+| Custom ECS S&P (Quick) | 3.344 ms | 3.628 ms | 1.50x |
+| Custom ECS S&P (Merge) | 3.431 ms | 3.637 ms | 1.46x |
+| Custom ECS S&P (Native) | 4.017 ms | 5.926 ms | 1.25x |
+| ECS Tree | 4.768 ms | 6.710 ms | 1.05x |
+| bitECS S&P (Insertion) | 3.283 ms | 3.442 ms | 1.53x |
+| bitECS S&P (Quick) | 3.375 ms | 3.586 ms | 1.49x |
+| bitECS S&P (Merge) | 3.430 ms | 3.629 ms | 1.46x |
+| bitECS S&P (Native) | 4.386 ms | 30.337 ms | 1.14x |
+| WASM ECS S&P (Insertion) | 0.946 ms | 0.983 ms | 5.30x |
+| WASM ECS S&P (Quick) | 1.143 ms | 1.207 ms | 4.39x |
+| WASM ECS S&P (Merge) | 1.105 ms | 1.151 ms | 4.54x |
+| WASM Tree | 3.753 ms | 3.932 ms | 1.34x |
