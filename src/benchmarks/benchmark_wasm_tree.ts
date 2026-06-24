@@ -1,7 +1,6 @@
 import { ENTITY_COLORS } from '../config';
 import { SeededPRNG } from '../prng';
 import type { Simulator, EntityState } from '../simulator';
-import { renderCanvas } from '../renderer';
 import type { ECSData } from './benchmark_custom_ecs';
 
 // Fetch and compile WebAssembly module synchronously/top-level await
@@ -13,7 +12,6 @@ export class WasmTreeSimulator implements Simulator {
   private wasm: any = null;
   private ecsData: ECSData | null = null;
   private times: number[] = [];
-  private colliding = new Uint8Array(0);
 
   init(numEntities: number, _width: number, _height: number, _prng: SeededPRNG) {
     const instance = new WebAssembly.Instance(wasmModule, {
@@ -39,7 +37,6 @@ export class WasmTreeSimulator implements Simulator {
     const id = new Int32Array(memoryBuffer, this.wasm.getIdPtr(), numEntities);
 
     this.ecsData = { posX, posYwh, colorId, angle, vx, vy, indices, id };
-    this.colliding = new Uint8Array(memoryBuffer, this.wasm.getCollidingPtr(), numEntities);
   }
 
   update(
@@ -69,17 +66,8 @@ export class WasmTreeSimulator implements Simulator {
     return { time, collisionCount };
   }
 
-  render(ctx: CanvasRenderingContext2D) {
-    if (this.ecsData) {
-      renderCanvas(
-        ctx.canvas,
-        ctx,
-        this.ecsData,
-        this.colliding,
-        'ecs',
-        this.ecsData.posX.length
-      );
-    }
+  getRenderData() {
+    return { data: this.ecsData, mode: 'ecs' as const, count: this.ecsData ? this.ecsData.posX.length : 0 };
   }
 
   getTimes() { return this.times; }

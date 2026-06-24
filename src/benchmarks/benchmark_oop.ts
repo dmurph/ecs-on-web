@@ -1,7 +1,6 @@
 import { ENTITY_COLORS, ENTITY_MAX_SPEED, SortMethod } from '../config';
 import { SeededPRNG } from '../prng';
 import type { Simulator, EntityState } from '../simulator';
-import { renderCanvas } from '../renderer';
 
 // === INTERNAL SORTING ALGORITHMS ===
 function insertionSortRangeOOP(entities: GameEntity[], left: number, right: number) {
@@ -367,11 +366,8 @@ export class OOPSimulator implements Simulator {
     return { time, collisionCount };
   }
 
-  /**
-   * Renders the current visual state of the entities and contacts.
-   */
-  render(ctx: CanvasRenderingContext2D) {
-    renderCanvas(ctx.canvas, ctx, this.entities, this.colliding, 'oop', this.entities.length);
+  getRenderData() {
+    return { data: this.entities, mode: 'oop' as const, count: this.entities.length };
   }
 
   getTimes() { return this.times; }

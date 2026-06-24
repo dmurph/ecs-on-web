@@ -1,7 +1,6 @@
 import { ENTITY_COLORS, ENTITY_MAX_SPEED, SortMethod } from '../config';
 import { SeededPRNG } from '../prng';
 import type { Simulator, EntityState } from '../simulator';
-import { renderCanvas } from '../renderer';
 
 // === INTERNAL SORTING ALGORITHMS ===
 function insertionSortRangeECS(indices: Int32Array, posX: Float64Array | Float32Array, left: number, right: number) {
@@ -379,13 +378,8 @@ export class CustomECSSimulator implements Simulator {
     return { time, collisionCount };
   }
 
-  /**
-   * Renders the custom ECS simulation.
-   */
-  render(ctx: CanvasRenderingContext2D) {
-    if (this.ecsData) {
-      renderCanvas(ctx.canvas, ctx, this.ecsData, this.colliding, 'ecs', this.ecsData.posX.length);
-    }
+  getRenderData() {
+    return { data: this.ecsData, mode: 'ecs' as const, count: this.ecsData ? this.ecsData.posX.length : 0 };
   }
 
   getTimes() { return this.times; }

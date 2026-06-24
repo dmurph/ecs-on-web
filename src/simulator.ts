@@ -57,10 +57,13 @@ export interface Simulator {
   ): { time: number, collisionCount: number };
   
   /**
-   * Draws the entities, collision indicator shapes, and neon contact lines.
-   * This is executed outside the timed benchmark section.
+   * Returns rendering data, mode, and count.
    */
-  render(ctx: CanvasRenderingContext2D): void;
+  getRenderData(): {
+    data: any;
+    mode: 'oop' | 'oop-tree' | 'ecs' | 'bitecs';
+    count: number;
+  };
   
   /**
    * Returns the list of recorded step execution times (ms) since the benchmark start.

@@ -1,12 +1,7 @@
 import { GameEntity } from './benchmark_oop';
 import { SeededPRNG } from '../prng';
 import type { Simulator, EntityState } from '../simulator';
-import { renderCanvas } from '../renderer';
 import { ENTITY_MAX_SPEED, TREE_REBALANCE_FRAME_INTERVAL, TREE_REBALANCE_PERCENTAGE } from '../config';
-export let debugRotations = false;
-export function setDebugRotations(val: boolean) {
-  debugRotations = val;
-}
 
 export class TreeNode {
   id: number;
@@ -277,9 +272,6 @@ function balance(tree: AABBTree, i: TreeNode): TreeNode {
       right.height = 1 + Math.max(right.left!.height, right.right!.height);
     }
 
-    if (debugRotations) {
-      console.log(`[OOP] Rotate Right at node ${i.id}, balanceFactor: ${balanceFactor}`);
-    }
     return right;
   }
 
@@ -324,9 +316,6 @@ function balance(tree: AABBTree, i: TreeNode): TreeNode {
       left.height = 1 + Math.max(left.left!.height, left.right!.height);
     }
 
-    if (debugRotations) {
-      console.log(`[OOP] Rotate Left at node ${i.id}, balanceFactor: ${balanceFactor}`);
-    }
     return left;
   }
 
@@ -729,11 +718,8 @@ export class OOPTreeSimulator implements Simulator {
     return { time, collisionCount };
   }
 
-  /**
-   * Renders the dynamic AABB tree simulation.
-   */
-  render(ctx: CanvasRenderingContext2D) {
-    renderCanvas(ctx.canvas, ctx, this.entities, this.colliding, 'oop-tree', this.entities.length);
+  getRenderData() {
+    return { data: this.entities, mode: 'oop-tree' as const, count: this.entities.length };
   }
 
   getTimes() { return this.times; }

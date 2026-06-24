@@ -2,7 +2,6 @@ import { addEntity, addComponent, createWorld, query } from 'bitecs';
 import { SeededPRNG } from '../prng';
 import { ENTITY_COLORS, ENTITY_MAX_SPEED } from '../config';
 import type { Simulator, EntityState } from '../simulator';
-import { renderCanvas } from '../renderer';
 // Helper: Insertion sort over a range for subarrays
 function insertionSortRangeBitecs(entities: Int32Array, posX: Float64Array, left: number, right: number) {
   for (let i = left + 1; i <= right; i++) {
@@ -90,24 +89,31 @@ function mergeSortBitecsRec(src: Int32Array, dst: Int32Array, posX: Float64Array
   }
 }
 
-// 1. Component Definitions
-export const PositionX = { value: new Float64Array(100000) };
-export const PositionYwh = {
-  y: new Float64Array(100000),
-  w: new Float64Array(100000),
-  h: new Float64Array(100000)
-};
-export const Physics = {
-  vx: new Float64Array(100000),
-  vy: new Float64Array(100000),
-  angle: new Float64Array(100000)
-};
-export const Style = {
-  colorId: new Uint8Array(100000)
-};
+export interface BitecsStore {
+  world: any;
+  entities: number[];
+  PositionX: { value: Float64Array };
+  PositionYwh: { y: Float64Array; w: Float64Array; h: Float64Array };
+  Physics: { vx: Float64Array; vy: Float64Array; angle: Float64Array };
+  Style: { colorId: Uint8Array };
+}
 
-// 2. Setup World & Entities
-export function createBitecsData(world: any, numEntities: number, canvasWidth: number, canvasHeight: number): number[] {
+export function createBitecsData(world: any, numEntities: number, canvasWidth: number, canvasHeight: number): BitecsStore {
+  const PositionX = { value: new Float64Array(numEntities) };
+  const PositionYwh = {
+    y: new Float64Array(numEntities),
+    w: new Float64Array(numEntities),
+    h: new Float64Array(numEntities)
+  };
+  const Physics = {
+    vx: new Float64Array(numEntities),
+    vy: new Float64Array(numEntities),
+    angle: new Float64Array(numEntities)
+  };
+  const Style = {
+    colorId: new Uint8Array(numEntities)
+  };
+
   const entities: number[] = [];
   for (let i = 0; i < numEntities; i++) {
     const eid = addEntity(world);
@@ -129,11 +135,11 @@ export function createBitecsData(world: any, numEntities: number, canvasWidth: n
 
     entities.push(eid);
   }
-  return entities;
+  return { world, entities, PositionX, PositionYwh, Physics, Style };
 }
 
-// 3. S&P Broadphase
 export function runBroadphase(
+  store: BitecsStore,
   entities: Int32Array,
   outPairs: Int32Array,
   sortType: 'insertion' | 'quick' | 'merge' | 'native' = 'insertion',
@@ -142,6 +148,7 @@ export function runBroadphase(
   let pairCount = 0;
   const len = entities.length;
   const maxPairs = outPairs.length / 2;
+  const { PositionX, PositionYwh } = store;
 
   // 1. Sort entities based on chosen algorithm
   if (sortType === 'insertion') {
@@ -183,14 +190,14 @@ export function runBroadphase(
   return pairCount;
 }
 
-// 4. Narrowphase Solver
 export function resolveCollisions(
-  _entities: number[],
+  store: BitecsStore,
   pairs: Int32Array,
   pairCount: number,
-  isColliding: Uint8Array
+  isColliding?: Uint8Array
 ): number {
   let collisionCount = 0;
+  const { PositionX, PositionYwh, Physics } = store;
 
   for (let i = 0; i < pairCount; i++) {
     const idA = pairs[i * 2];
@@ -202,8 +209,10 @@ export function resolveCollisions(
     const minDist = (PositionYwh.w[idA] + PositionYwh.w[idB]) / 2; // Radius sum
 
     if (distSq < minDist * minDist && distSq > 0.001) {
-      isColliding[idA] = 1;
-      isColliding[idB] = 1;
+      if (isColliding) {
+        isColliding[idA] = 1;
+        isColliding[idB] = 1;
+      }
 
       pairs[collisionCount * 2] = idA;
       pairs[collisionCount * 2 + 1] = idB;
@@ -252,13 +261,14 @@ export function resolveCollisions(
 }
 
 export function updateMovement(
-  world: any,
+  store: BitecsStore,
   canvasWidth: number,
   canvasHeight: number,
   speedMultiplier: number,
   behavior: string,
   prng: SeededPRNG
 ) {
+  const { world, PositionX, PositionYwh, Physics } = store;
   if (behavior === 'wander') {
     for (const eid of query(world, [PositionX, PositionYwh, Physics])) {
       Physics.angle[eid] += (prng.next() - 0.5) * 0.4;
@@ -320,12 +330,10 @@ export function updateMovement(
 export class BitECSSimulator implements Simulator {
   private sortType: 'insertion' | 'quick' | 'merge' | 'native';
 
-  private world: any = null;
-  private entities: number[] = [];
+  private store: BitecsStore | null = null;
   private sortedEntities: Int32Array = new Int32Array(0);
   private tempEntities: Int32Array = new Int32Array(0);
   private times: number[] = [];
-  private colliding = new Uint8Array(0);
   private pairsBuffer = new Int32Array(0);
   private maxCollisions = 200000;
 
@@ -335,67 +343,48 @@ export class BitECSSimulator implements Simulator {
     this.sortType = sortType;
   }
 
-  /**
-   * Initializes the bitECS world, registers components, and spawns entity IDs.
-   */
   init(numEntities: number, width: number, height: number, _prng: SeededPRNG) {
-    this.world = createWorld({
-      components: {
-        PositionX,
-        PositionYwh,
-        Physics,
-        Style
-      }
-    });
-    this.entities = createBitecsData(this.world, numEntities, width, height);
-    this.sortedEntities = new Int32Array(this.entities);
+    const world = createWorld();
+    this.store = createBitecsData(world, numEntities, width, height);
+    this.sortedEntities = new Int32Array(this.store.entities);
     this.tempEntities = new Int32Array(numEntities);
     
-    this.colliding = new Uint8Array(numEntities);
     this.pairsBuffer = new Int32Array(this.maxCollisions * 2);
   }
 
-  /**
-   * Executes a full simulation step, timing all operations:
-   * 1. Movement updates (updating PositionX/PositionYwh/Physics components).
-   * 2. Sweep-and-Prune broadphase (sorting entity IDs using PositionX, sweeping bounds).
-   * 3. Narrowphase resolution (reading entity components using pair indices to compute bounce impulses).
-   * 
-   * This benchmarks bitECS's internal SoA components lookup performance compared to
-   * the custom ECS implementation and raw OOP pointers.
-   */
   update(width: number, height: number, speedMultiplier: number, behavior: string, prng: SeededPRNG): { time: number, collisionCount: number } {
     const start = performance.now();
-    updateMovement(this.world, width, height, speedMultiplier, behavior, prng);
-    const pairsCount = runBroadphase(this.sortedEntities, this.pairsBuffer, this.sortType, this.tempEntities);
-    
-    this.colliding.fill(0);
-    const collisionCount = resolveCollisions(this.entities, this.pairsBuffer, pairsCount, this.colliding);
-    
+    let collisionCount = 0;
+    if (this.store) {
+      updateMovement(this.store, width, height, speedMultiplier, behavior, prng);
+      const pairsCount = runBroadphase(this.store, this.sortedEntities, this.pairsBuffer, this.sortType, this.tempEntities);
+      
+      collisionCount = resolveCollisions(this.store, this.pairsBuffer, pairsCount);
+    }
     const end = performance.now();
     const time = end - start;
     this.times.push(time);
     return { time, collisionCount };
   }
 
-  /**
-   * Renders the bitECS simulation state.
-   */
-  render(ctx: CanvasRenderingContext2D) {
-    renderCanvas(ctx.canvas, ctx, this.entities, this.colliding, 'bitecs', this.entities.length);
+  getRenderData() {
+    return {
+      data: this.store,
+      mode: 'bitecs' as const,
+      count: this.store ? this.store.entities.length : 0
+    };
   }
 
   getTimes() { return this.times; }
   clearTimes() { this.times = []; }
 
-  /**
-   * Translates flat bitECS component arrays into structured baseline EntityState array.
-   */
   getPositions(): EntityState[] {
-    const len = this.entities.length;
+    if (!this.store) return [];
+    const { PositionX, PositionYwh, Physics, Style, entities } = this.store;
+    const len = entities.length;
     const result = new Array<EntityState>(len);
     for (let i = 0; i < len; i++) {
-      const eid = this.entities[i];
+      const eid = entities[i];
       result[i] = {
         x: PositionX.value[eid],
         y: PositionYwh.y[eid],
@@ -410,12 +399,11 @@ export class BitECSSimulator implements Simulator {
     return result;
   }
 
-  /**
-   * Overwrites flat bitECS component arrays with structured baseline state.
-   */
   setPositions(positions: EntityState[]) {
-    for (let i = 0; i < this.entities.length; i++) {
-      const eid = this.entities[i];
+    if (!this.store) return;
+    const { PositionX, PositionYwh, Physics, Style, entities } = this.store;
+    for (let i = 0; i < entities.length; i++) {
+      const eid = entities[i];
       const p = positions[i];
       PositionX.value[eid] = p.x;
       PositionYwh.y[eid] = p.y;

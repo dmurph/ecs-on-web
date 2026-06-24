@@ -1,12 +1,7 @@
 import { ENTITY_COLORS, ENTITY_MAX_SPEED, TREE_REBALANCE_FRAME_INTERVAL, TREE_REBALANCE_PERCENTAGE } from '../config';
 import { SeededPRNG } from '../prng';
 import type { Simulator, EntityState } from '../simulator';
-import { renderCanvas } from '../renderer';
 import type { ECSData } from './benchmark_custom_ecs';
-export let debugRotations = false;
-export function setDebugRotations(val: boolean) {
-  debugRotations = val;
-}
 
 /**
  * A highly optimized, flat pre-allocated AABB Tree using TypedArrays (SoA layout).
@@ -326,9 +321,6 @@ function balanceFlat(tree: FlatAABBTree, i: number): number {
       tree.height[right] = 1 + Math.max(tree.height[tree.left[right]], tree.height[tree.right[right]]);
     }
 
-    if (debugRotations) {
-      console.log(`[ECS] Rotate Right at node ${i}, balanceFactor: ${balanceFactor}`);
-    }
     return right;
   }
 
@@ -376,9 +368,6 @@ function balanceFlat(tree: FlatAABBTree, i: number): number {
       tree.height[left] = 1 + Math.max(tree.height[tree.left[left]], tree.height[tree.right[left]]);
     }
 
-    if (debugRotations) {
-      console.log(`[ECS] Rotate Left at node ${i}, balanceFactor: ${balanceFactor}`);
-    }
     return left;
   }
 
@@ -894,10 +883,8 @@ export class ECSTreeSimulator implements Simulator {
     return { time, collisionCount };
   }
 
-  render(ctx: CanvasRenderingContext2D) {
-    if (this.ecsData) {
-      renderCanvas(ctx.canvas, ctx, this.ecsData, this.colliding, 'ecs', this.ecsData.posX.length);
-    }
+  getRenderData() {
+    return { data: this.ecsData, mode: 'ecs' as const, count: this.ecsData ? this.ecsData.posX.length : 0 };
   }
 
   getTimes() { return this.times; }

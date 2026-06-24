@@ -1,7 +1,7 @@
 import { ENTITY_COLORS } from './config';
 import { GameEntity } from './benchmarks/benchmark_oop';
 import type { ECSData } from './benchmarks/benchmark_custom_ecs';
-import { PositionX, PositionYwh, Style } from './benchmarks/benchmark_bitecs';
+import type { BitecsStore } from './benchmarks/benchmark_bitecs';
 
 interface RenderEntity {
   id: number;
@@ -13,7 +13,7 @@ interface RenderEntity {
 }
 
 function getRenderEntity(
-  data: GameEntity[] | ECSData | number[],
+  data: any,
   i: number,
   mode: 'oop' | 'oop-tree' | 'ecs' | 'bitecs'
 ): RenderEntity {
@@ -39,15 +39,15 @@ function getRenderEntity(
       color: ENTITY_COLORS[ecs.colorId[i]]
     };
   } else {
-    const entities = data as number[];
-    const eid = entities[i];
+    const store = data as BitecsStore;
+    const eid = store.entities[i];
     return {
       id: eid,
-      x: PositionX.value[eid],
-      y: PositionYwh.y[eid],
-      w: PositionYwh.w[eid],
-      h: PositionYwh.h[eid],
-      color: ENTITY_COLORS[Style.colorId[eid]]
+      x: store.PositionX.value[eid],
+      y: store.PositionYwh.y[eid],
+      w: store.PositionYwh.w[eid],
+      h: store.PositionYwh.h[eid],
+      color: ENTITY_COLORS[store.Style.colorId[eid]]
     };
   }
 }
@@ -55,8 +55,7 @@ function getRenderEntity(
 export function renderCanvas(
   canvas: HTMLCanvasElement,
   ctx: CanvasRenderingContext2D,
-  data: GameEntity[] | ECSData | number[],
-  isColliding: Uint8Array,
+  data: any,
   mode: 'oop' | 'oop-tree' | 'ecs' | 'bitecs',
   numEntities: number
 ) {
@@ -82,25 +81,13 @@ export function renderCanvas(
   }
   ctx.stroke();
 
-  // Colors
-  const strokeCollision = '#e11d48';
-  const fillCollision = 'rgba(225, 29, 72, 0.2)';
   const fillOpacity = 'cc'; 
-
-  ctx.lineWidth = 1.5;
 
   // 1. Draw entities
   for (let i = 0; i < numEntities; i++) {
     const entity = getRenderEntity(data, i, mode);
-    const colliding = isColliding[entity.id] === 1;
 
-    if (colliding) {
-      ctx.fillStyle = fillCollision;
-      ctx.strokeStyle = strokeCollision;
-    } else {
-      ctx.fillStyle = entity.color + fillOpacity;
-      ctx.strokeStyle = entity.color;
-    }
+    ctx.fillStyle = entity.color + fillOpacity;
 
     // Draw as actual physical circle
     const r = entity.w / 2;

@@ -3,10 +3,6 @@ import { ENTITY_COLORS } from './src/config';
 import { GameEntity, runOOPBroadphase, resolveOOPPhysics, updateOOPMovement } from './src/benchmarks/benchmark_oop';
 import { createECSData, runECSBroadphase, resolveECSPhysics, updateECSMovement } from './src/benchmarks/benchmark_custom_ecs';
 import {
-  PositionX,
-  PositionYwh,
-  Physics,
-  Style,
   createBitecsData,
   runBitecsBroadphase,
   resolveBitecsPhysics,
@@ -59,16 +55,11 @@ function runVerification() {
   const ecsData = createECSData(numEntities, w, h);
 
   // 3. Initialize bitECS World and Entities
-  const bitecsWorld = createWorld({
-    components: {
-      PositionX,
-      PositionYwh,
-      Physics,
-      Style
-    }
-  });
-  const bitecsEntities = createBitecsData(bitecsWorld, numEntities, w, h);
+  const bitecsWorld = createWorld();
+  const bitecsData = createBitecsData(bitecsWorld, numEntities, w, h);
+  const bitecsEntities = bitecsData.entities;
   const bitecsSortedEntities = new Int32Array(bitecsEntities);
+  const { PositionX: bPositionX, PositionYwh: bPositionYwh, Physics: bPhysics, Style: bStyle } = bitecsData;
 
   // 4. Sync positions to ensure absolute identical starting datasets across all systems
   for (let i = 0; i < numEntities; i++) {
@@ -100,14 +91,14 @@ function runVerification() {
 
     // Sync bitECS
     const eid = bitecsEntities[id];
-    PositionX.value[eid] = entity.x;
-    PositionYwh.y[eid] = entity.y;
-    PositionYwh.w[eid] = entity.w;
-    PositionYwh.h[eid] = entity.h;
-    Physics.vx[eid] = entity.vx;
-    Physics.vy[eid] = entity.vy;
-    Physics.angle[eid] = entity.angle;
-    Style.colorId[eid] = ENTITY_COLORS.indexOf(entity.color);
+    bPositionX.value[eid] = entity.x;
+    bPositionYwh.y[eid] = entity.y;
+    bPositionYwh.w[eid] = entity.w;
+    bPositionYwh.h[eid] = entity.h;
+    bPhysics.vx[eid] = entity.vx;
+    bPhysics.vy[eid] = entity.vy;
+    bPhysics.angle[eid] = entity.angle;
+    bStyle.colorId[eid] = ENTITY_COLORS.indexOf(entity.color);
   }
 
   // Initialize AABB Tree with synced initial positions
@@ -161,7 +152,7 @@ function runVerification() {
     updateOOPMovement(oopEntitiesById, w, h, 1.0, 'wander', prngOOP);
     updateOOPTreeMovement(oopTreeEntities, w, h, 1.0, 'wander', prngOOPTree, treeMoveBuffer);
     updateECSMovement(ecsData, w, h, 1.0, 'wander', prngECS);
-    updateBitecsMovement(bitecsWorld, w, h, 1.0, 'wander', prngBitecs);
+    updateBitecsMovement(bitecsData, w, h, 1.0, 'wander', prngBitecs);
 
     // Update AABB Tree
     updateTree(oopTree, oopTreeEntities, treeMoveBuffer, frame, prngOOPTree);
@@ -182,7 +173,7 @@ function runVerification() {
       ecsPairsBuffer,
       ecsData.id
     );
-    const bitecsPairsCount = runBitecsBroadphase(bitecsSortedEntities, bitecsPairsBuffer);
+    const bitecsPairsCount = runBitecsBroadphase(bitecsData, bitecsSortedEntities, bitecsPairsBuffer);
 
     // Assert S&P-based systems match 100% on broadphase
     if (oopPairsCount !== ecsPairsCount || ecsPairsCount !== bitecsPairsCount) {
@@ -244,7 +235,7 @@ function runVerification() {
     const oopCollisionCount = resolveOOPPhysics(oopEntities, oopColliding, oopPairsBuffer);
     const oopTreeCollisionCount = resolveOOPTreePhysics(oopTreeEntitiesById, oopTreePairsBuffer, oopTreePairsCount, oopTreeColliding);
     const ecsCollisionCount = resolveECSPhysics(ecsData, ecsPairsBuffer, ecsPairsCount, ecsColliding);
-    const bitecsCollisionCount = resolveBitecsPhysics(bitecsEntities, bitecsPairsBuffer, bitecsPairsCount, bitecsColliding);
+    const bitecsCollisionCount = resolveBitecsPhysics(bitecsData, bitecsPairsBuffer, bitecsPairsCount, bitecsColliding);
 
     // Assert all systems match 100% on narrowphase
     if (oopCollisionCount !== ecsCollisionCount || ecsCollisionCount !== bitecsCollisionCount || oopCollisionCount !== oopTreeCollisionCount) {
