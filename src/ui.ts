@@ -188,6 +188,14 @@ function generateMetricCards(activeSimulatorIds?: string[]) {
     header.appendChild(dot);
     card.appendChild(header);
 
+    const sourceLink = document.createElement('a');
+    sourceLink.className = 'card-source-link';
+    sourceLink.href = `https://github.com/dmurph/ecs-on-web/blob/main/src/benchmarks/${sim.sourceFile}`;
+    sourceLink.target = '_blank';
+    sourceLink.rel = 'noopener noreferrer';
+    sourceLink.textContent = sim.sourceFile;
+    card.appendChild(sourceLink);
+
     const valuesDiv = document.createElement('div');
     valuesDiv.className = 'metric-values';
 

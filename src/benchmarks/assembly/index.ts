@@ -323,7 +323,8 @@ export function update(
   speedMultiplier: f64,
   behavior: i32,
   seed: u32,
-  sortType: i32
+  sortType: i32,
+): i32 {
   // Step 1: Update movements
   updateMovement(width, height, speedMultiplier, behavior, seed);
   // Step 2a: Broadphase (sort)

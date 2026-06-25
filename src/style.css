@@ -243,11 +243,11 @@ input[type='range'] {
 .metric-card {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 5px;
   margin-bottom: 0;
-  min-width: 200px;
-  max-width: 300px;
-  flex: 1 1 220px;
+  min-width: max-content;
+  max-width: 320px;
+  flex: 1 1 auto;
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
   padding: 10px;
@@ -257,6 +257,11 @@ input[type='range'] {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
+}
+
+.card-header-simple h3 {
+  white-space: nowrap;
 }
 
 .legend-dot {
@@ -267,10 +272,26 @@ input[type='range'] {
   border-radius: 50%;
 }
 
+.card-source-link {
+  font-size: 0.75rem;
+  color: var(--color-text-dim);
+  text-decoration: none;
+  font-family: var(--font-mono);
+  margin-top: -6px;
+  display: inline-block;
+  width: fit-content;
+  transition: color 0.15s ease;
+}
+
+.card-source-link:hover {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
 .metric-values {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 3px;
 }
 
 .metric-item {

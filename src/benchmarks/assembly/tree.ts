@@ -693,7 +693,8 @@ export function update(
   height: f64,
   speedMultiplier: f64,
   behavior: i32,
-  seed: u32
+  seed: u32,
+): i32 {
   // Step 1: Update movements
   const moveCount = updateMovementTree(width, height, speedMultiplier, behavior, seed);
   // Step 2a: Update tree (Broadphase)
