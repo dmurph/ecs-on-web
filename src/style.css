@@ -454,7 +454,7 @@ input[type='range'] {
 }
 
 .svg-container {
-  width: 100%;
+  width: calc(100% - 10px);
   height: 250px;
   margin-left: 5px;
   margin-right: 5px;
@@ -879,6 +879,7 @@ body.is-embedded .app-container {
 
 body.is-embedded {
   background-color: transparent;
+  overflow: hidden;
 }
 
 /* ==========================================
