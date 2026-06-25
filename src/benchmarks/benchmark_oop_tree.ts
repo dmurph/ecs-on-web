@@ -322,6 +322,11 @@ function balance(tree: AABBTree, i: TreeNode): TreeNode {
   return i;
 }
 
+/**
+ * Step 2a: Update tree (Broadphase)
+ * Re-computes bounding boxes and re-inserts heap entities that moved outside their cached "fat bounds" margin.
+ * Fat bounds margins (e.g., margin = 2.0) buffer minor entity movements, drastically reducing how often the spatial BVH must balance and restructure nodes.
+ */
 export function updateTree(
   tree: AABBTree,
   entities: TreeGameEntity[],
@@ -427,6 +432,11 @@ function queryOverlapIter(
 }
 
 
+/**
+ * Step 1: Update movements
+ * Updates positions for traditional OOP objects (`TreeGameEntity`) scattered across heap memory.
+ * Checks whether an entity escaped its cached leaf bounding box and pushes escaping nodes to `outMoveBuffer` for spatial tree re-insertion.
+ */
 export function updateMovement(
   entities: TreeGameEntity[],
   canvasWidth: number,
@@ -511,6 +521,11 @@ export function updateMovement(
   }
 }
 
+/**
+ * Step 2b: Broadphase
+ * Traverses the dynamic spatial AABB tree (hierarchical BVH) to find overlapping bounding boxes.
+ * While hierarchical trees have O(N log N) algorithmic complexity, traversing pointer-linked nodes (`node.left`, `node.right`) causes frequent CPU cache misses compared to streaming flat ECS arrays.
+ */
 export function runBroadphase(
   root: TreeNode | null,
   outPairsBuffer: Int32Array
@@ -556,6 +571,10 @@ export function runBroadphase(
   return pairCount;
 }
 
+/**
+ * Step 3: Narrowphase
+ * Resolves exact circular collisions and bounce reactions for overlapping pairs discovered during BVH traversal.
+ */
 export function resolveCollisions(
   entities: TreeGameEntity[],
   pairsBuffer: Int32Array,
@@ -699,14 +718,18 @@ export class OOPTreeSimulator implements Simulator {
     let collisionCount = 0;
     if (this.tree) {
       this.moveBuffer = [];
+      // Step 1: Update movements
       updateMovement(this.entities, width, height, speedMultiplier, behavior, prng, this.moveBuffer);
       if (this.moveBuffer.length > 0) {
         this.movedFrameCount++;
       }
+      // Step 2a: Update tree (Broadphase)
       updateTree(this.tree, this.entities, this.moveBuffer, this.movedFrameCount, prng);
+      // Step 2b: Broadphase queries
       const pairsCount = runBroadphase(this.tree.root, this.pairsBuffer);
       
       this.colliding.fill(0);
+      // Step 3: Narrowphase
       collisionCount = resolveCollisions(this.entities, this.pairsBuffer, pairsCount, this.colliding);
     }
     const end = performance.now();

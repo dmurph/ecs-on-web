@@ -72,6 +72,8 @@ export class WasmECSSimulator implements Simulator {
     if (this.sortMethod === SortMethod.Quick) sortTypeId = 1;
     else if (this.sortMethod === SortMethod.Merge) sortTypeId = 2;
 
+    // Step 1 (Update movements), Step 2 (Broadphase sort/sweep), and Step 3 (Narrowphase)
+    // are executed synchronously inside WebAssembly memory without crossing the JS-WASM boundary.
     const collisionCount = this.wasm.update(
       width,
       height,

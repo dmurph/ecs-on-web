@@ -13,6 +13,12 @@ export interface BitecsStore {
   Style: { colorId: Uint8Array };
 }
 
+/**
+ * Step 1: Update movements
+ * Updates entity positions and handles boundary bounces using bitECS component stores.
+ * In bitECS, component properties (`PositionX`, `PositionYwh`, `Physics`) are backed by flat TypedArrays (Structure of Arrays).
+ * Iterating over entity IDs accesses contiguous memory, keeping CPU L1/L2 cache lines warm.
+ */
 export function updateMovement(
   store: BitecsStore,
   canvasWidth: number,
@@ -110,6 +116,11 @@ export function createBitecsData(world: any, numEntities: number, canvasWidth: n
   return { world, entities, PositionX, PositionYwh, Physics, Style };
 }
 
+/**
+ * Step 2: Broadphase
+ * Sweep & Prune broadphase using bitECS component arrays.
+ * Accesses `PositionX.value` directly to sort and sweep entity IDs with high memory locality.
+ */
 export function runBroadphase(
   store: BitecsStore,
   entities: Int32Array,
@@ -162,6 +173,11 @@ export function runBroadphase(
   return pairCount;
 }
 
+/**
+ * Step 3: Narrowphase
+ * Resolves exact circle overlaps and applies bounce velocity impulses.
+ * Indexes directly into bitECS TypedArray component stores using candidate collision pairs.
+ */
 export function resolveCollisions(
   store: BitecsStore,
   pairs: Int32Array,
@@ -277,9 +293,12 @@ export class BitECSSimulator implements Simulator {
     const start = performance.now();
     let collisionCount = 0;
     if (this.store) {
+      // Step 1: Update movements
       updateMovement(this.store, width, height, speedMultiplier, behavior, prng);
+      // Step 2: Broadphase
       const pairsCount = runBroadphase(this.store, this.sortedEntities, this.pairsBuffer, this.sortType, this.tempEntities);
       
+      // Step 3: Narrowphase
       collisionCount = resolveCollisions(this.store, this.pairsBuffer, pairsCount);
     }
     const end = performance.now();

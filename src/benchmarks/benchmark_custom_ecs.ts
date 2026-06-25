@@ -45,6 +45,12 @@ export function createECSData(numEntities: number, canvasWidth: number, canvasHe
 }
 
 
+/**
+ * Step 1: Update movements
+ * Updates entity positions and handles boundary collisions.
+ * In this Custom ECS (Structure of Arrays), component properties (`posX`, `posYwh`, `vx`, `vy`) are stored in flat TypedArrays.
+ * Sequential access across contiguous memory buffers maximizes CPU cache line efficiency (L1/L2 cache hits) compared to OOP pointer chasing.
+ */
 export function updateMovement(
   ecsData: ECSData,
   canvasWidth: number,
@@ -104,6 +110,12 @@ export function updateMovement(
   }
 }
 
+/**
+ * Step 2: Broadphase
+ * Sweep & Prune broadphase collision detection.
+ * Sorts 1D entity indices along the X-axis using `posX`, then sweeps for overlapping bounding boxes.
+ * Contiguous memory streaming in flat arrays consistently outperforms pointer-chasing in dynamic spatial trees.
+ */
 export function runBroadphase(
   indices: Int32Array,
   posX: Float64Array,
@@ -155,6 +167,11 @@ export function runBroadphase(
   return pairCount;
 }
 
+/**
+ * Step 3: Narrowphase
+ * Resolves exact circle-circle collisions and velocity bounce reactions.
+ * Uses candidate pairs from broadphase to index directly into component TypedArrays, calculating overlap impulses without object allocations.
+ */
 export function resolveCollisions(
   ecs: ECSData,
   pairs: Int32Array,
@@ -223,64 +240,6 @@ export function resolveCollisions(
   return collisionCount;
 }
 
-export function updateMovement(
-  ecsData: ECSData,
-  canvasWidth: number,
-  canvasHeight: number,
-  speedMultiplier: number,
-  behavior: string,
-  prng: SeededPRNG
-) {
-  const { posX, posYwh, vx, vy, angle } = ecsData;
-  const len = posX.length;
-
-  if (behavior === 'wander') {
-    for (let i = 0; i < len; i++) {
-      angle[i] += (prng.next() - 0.5) * 0.4;
-      vx[i] = Math.cos(angle[i]) * 1.2 * speedMultiplier;
-      vy[i] = Math.sin(angle[i]) * 1.2 * speedMultiplier;
-
-      posX[i] += vx[i];
-      posYwh[i * 3 + 0] += vy[i]; // posY
-
-      let bounced = false;
-      const w = posYwh[i * 3 + 1];
-      const h = posYwh[i * 3 + 2];
-
-      if (posX[i] < 0) {
-        posX[i] = 0;
-        angle[i] = Math.PI - angle[i];
-        bounced = true;
-      } else if (posX[i] + w > canvasWidth) {
-        posX[i] = canvasWidth - w;
-        angle[i] = Math.PI - angle[i];
-        bounced = true;
-      }
-
-      if (posYwh[i * 3 + 0] < 0) {
-        posYwh[i * 3 + 0] = 0;
-        angle[i] = -angle[i];
-        bounced = true;
-      } else if (posYwh[i * 3 + 0] + h > canvasHeight) {
-        posYwh[i * 3 + 0] = canvasHeight - h;
-        angle[i] = -angle[i];
-        bounced = true;
-      }
-
-      if (bounced) {
-        vx[i] = Math.cos(angle[i]) * 1.2 * speedMultiplier;
-        vy[i] = Math.sin(angle[i]) * 1.2 * speedMultiplier;
-      }
-    }
-  } else if (behavior === 'erratic') {
-    for (let i = 0; i < len; i++) {
-      const w = posYwh[i * 3 + 1];
-      const h = posYwh[i * 3 + 2];
-      posX[i] = prng.next() * (canvasWidth - w);
-      posYwh[i * 3 + 0] = prng.next() * (canvasHeight - h);
-    }
-  }
-}
 
 /**
  * Simulator representing a custom lightweight Entity Component System (ECS).
@@ -337,7 +296,9 @@ export class CustomECSSimulator implements Simulator {
     const start = performance.now();
     let collisionCount = 0;
     if (this.ecsData) {
+      // Step 1: Update movements
       updateMovement(this.ecsData, width, height, speedMultiplier, behavior, prng);
+      // Step 2: Broadphase
       const pairsCount = runBroadphase(
         this.ecsData.indices,
         this.ecsData.posX,
@@ -349,6 +310,7 @@ export class CustomECSSimulator implements Simulator {
       );
       
       this.colliding.fill(0);
+      // Step 3: Narrowphase
       collisionCount = resolveCollisions(this.ecsData, this.pairsBuffer, pairsCount, this.colliding);
     }
     const end = performance.now();

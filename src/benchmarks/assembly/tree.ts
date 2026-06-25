@@ -388,6 +388,11 @@ export function getIdPtr(): usize { return changetype<usize>(id); }
 export function getCollidingPtr(): usize { return changetype<usize>(colliding); }
 export function getPairsBufferPtr(): usize { return changetype<usize>(pairsBuffer); }
 
+/**
+ * Step 1: Update movements
+ * Updates entity kinematics and boundary bounces in contiguous WebAssembly memory.
+ * Checks whether an entity escaped its spatial leaf bounds and pushes escaping IDs to `moveBuffer`.
+ */
 function updateMovementTree(width: f64, height: f64, speedMultiplier: f64, behavior: i32, seed: u32): i32 {
   prng.setSeed(seed);
   const len = posX.length;
@@ -454,6 +459,11 @@ function updateMovementTree(width: f64, height: f64, speedMultiplier: f64, behav
   return moveCount;
 }
 
+/**
+ * Step 2a: Update tree (Broadphase)
+ * Re-inserts moved entities into the flat AABB spatial tree.
+ * Fat bounds margins (margin = 2.0) buffer minor movements, reducing how often tree leaves must be removed and re-inserted.
+ */
 function updateDirtyLeaves(moveCount: i32): void {
   const margin: f64 = 2.0;
   for (let k = 0; k < moveCount; k++) {
@@ -494,6 +504,11 @@ function updateDirtyLeaves(moveCount: i32): void {
   }
 }
 
+/**
+ * Step 2b: Broadphase
+ * Traverses the spatial AABB tree using an iterative stack (`mainStack`) to find overlapping bounding boxes.
+ * Pre-allocated flat arrays (`treeLeft`, `treeRight`, `treeMinX`, etc.) eliminate pointer indirection overhead.
+ */
 function runBroadphaseTree(): i32 {
   if (treeRoot == -1 || unchecked(treeLeft[treeRoot]) == -1) return 0;
 
@@ -588,6 +603,11 @@ function runBroadphaseTree(): i32 {
   return pairCount;
 }
 
+/**
+ * Step 3: Narrowphase
+ * Resolves exact circular overlaps and applies elastic collision impulses.
+ * Direct array indexing by entity ID in bare-metal memory prevents runtime allocations.
+ */
 function resolvePhysics(pairCount: i32): i32 {
   const len = posX.length;
   let collisionCount = 0;
@@ -668,9 +688,12 @@ export function update(
   speedMultiplier: f64,
   behavior: i32,
   seed: u32
-): i32 {
+  // Step 1: Update movements
   const moveCount = updateMovementTree(width, height, speedMultiplier, behavior, seed);
+  // Step 2a: Update tree (Broadphase)
   updateDirtyLeaves(moveCount);
+  // Step 2b: Broadphase queries
   const pairCount = runBroadphaseTree();
+  // Step 3: Narrowphase
   return resolvePhysics(pairCount);
 }

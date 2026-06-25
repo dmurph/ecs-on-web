@@ -40,6 +40,12 @@ export class GameEntity {
   }
 }
 
+/**
+ * Step 1: Update movements
+ * Iterates through entities to update positions based on velocity and handle boundary bounces.
+ * In traditional OOP, each entity is a separately allocated heap object (`GameEntity`).
+ * Traversing `entitiesById` involves chasing object references scattered across memory, which causes frequent CPU cache misses compared to streaming flat ECS arrays.
+ */
 export function updateMovement(
   entitiesById: GameEntity[],
   canvasWidth: number,
@@ -95,6 +101,12 @@ export function updateMovement(
   }
 }
 
+/**
+ * Step 2: Broadphase
+ * Identifies potential collision pairs by checking bounding box intersections (Sweep & Prune).
+ * Sorts entities along the X-axis, then sweeps adjacent entities until their X coordinates no longer overlap.
+ * Sorting and sweeping OOP objects requires dereferencing pointers to access `.x`, `.w`, `.y`, and `.h`, incurring memory indirection overhead.
+ */
 export function runBroadphase(
   entities: GameEntity[],
   sortMethod: SortMethod = SortMethod.Insertion,
@@ -135,6 +147,11 @@ export function runBroadphase(
   return pairCount;
 }
 
+/**
+ * Step 3: Narrowphase
+ * Resolves exact circle-to-circle collisions and applies elastic bounce impulses.
+ * For each candidate overlap from the broadphase, calculates exact Euclidean distance and updates velocity vectors.
+ */
 export function resolveCollisions(
   entities: GameEntity[],
   isColliding: Uint8Array,
@@ -267,10 +284,13 @@ export class OOPSimulator implements Simulator {
    */
   update(width: number, height: number, speedMultiplier: number, behavior: string, prng: SeededPRNG): { time: number, collisionCount: number } {
     const start = performance.now();
+    // Step 1: Update movements
     updateMovement(this.entitiesById, width, height, speedMultiplier, behavior, prng);
+    // Step 2: Broadphase
     runBroadphase(this.entities, this.sortMethod, this.tempEntities);
     
     this.colliding.fill(0);
+    // Step 3: Narrowphase
     const collisionCount = resolveCollisions(this.entities, this.colliding, this.pairsBuffer);
     
     const end = performance.now();
