@@ -36,12 +36,13 @@ const benchmarkLength = 200; // 200 frames
 async function runBenchmarkForBehavior(
   numEntities: number,
   behavior: 'wander' | 'erratic' | 'static',
+  nameFilter: string | null = null,
 ) {
   console.log(
     `\nRunning benchmark for: ${behavior.toUpperCase()} with ${numEntities} entities...`,
   );
 
-  const sims = [
+  let sims = [
     {
       instance: new OOPSimulator(SortMethod.Insertion),
       name: 'OOP S&P (Insertion)',
@@ -91,6 +92,17 @@ async function runBenchmarkForBehavior(
     },
     { instance: new WasmTreeSimulator(), name: 'WASM Tree' },
   ];
+
+  if (nameFilter) {
+    sims = sims.filter((s) =>
+      s.name.toLowerCase().includes(nameFilter.toLowerCase()),
+    );
+  }
+
+  if (sims.length === 0) {
+    console.log('No simulators matched the filter.');
+    return;
+  }
 
   // Initialize and get initial positions from OOP simulator to sync all of them
   const basePrng = new SeededPRNG(42);
@@ -146,7 +158,7 @@ async function runBenchmarkForBehavior(
   });
 
   // Calculate speedup vs OOP S&P (Insertion)
-  const oopResult = results.find((r) => r.name === 'OOP S&P (Insertion)')!;
+  const oopResult = results.find((r) => r.name === 'OOP S&P (Insertion)');
 
   console.log(
     `\n### Results for ${behavior.toUpperCase()} (${numEntities} entities)`,
@@ -156,9 +168,9 @@ async function runBenchmarkForBehavior(
   );
   console.log(`| :--- | :--- | :--- | :--- |`);
   results.forEach((r) => {
-    const speedup = oopResult.avg / r.avg;
+    const speedup = oopResult ? oopResult.avg / r.avg : 1.0;
     console.log(
-      `| ${r.name} | ${r.avg.toFixed(3)} ms | ${r.p99.toFixed(3)} ms | ${speedup.toFixed(2)}x |`,
+      `| ${r.name} | ${r.avg.toFixed(3)} ms | ${r.p99.toFixed(3)} ms | ${oopResult ? speedup.toFixed(2) + 'x' : 'N/A'} |`,
     );
   });
 }
@@ -192,15 +204,32 @@ async function start() {
   const configModule = await import('../src/config');
   SortMethod = configModule.SortMethod;
 
-  // Run 5000 entities
-  await runBenchmarkForBehavior(5000, 'wander');
-  await runBenchmarkForBehavior(5000, 'erratic');
-  await runBenchmarkForBehavior(5000, 'static');
+  // Simple command line parsing
+  const args = process.argv.slice(2);
+  let nameFilter: string | null = null;
+  let entitiesList = [5000];
+  let behaviors: ('wander' | 'erratic' | 'static')[] = ['wander'];
 
-  // Run 15000 entities
-  await runBenchmarkForBehavior(15000, 'wander');
-  await runBenchmarkForBehavior(15000, 'erratic');
-  await runBenchmarkForBehavior(15000, 'static');
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--filter' || args[i] === '-f') {
+      nameFilter = args[++i];
+    } else if (args[i] === '--entities' || args[i] === '-e') {
+      entitiesList = args[++i].split(',').map(Number);
+    } else if (args[i] === '--behavior' || args[i] === '-b') {
+      const val = args[++i];
+      if (val === 'all') {
+        behaviors = ['wander', 'erratic', 'static'];
+      } else {
+        behaviors = val.split(',') as any;
+      }
+    }
+  }
+
+  for (const entities of entitiesList) {
+    for (const behavior of behaviors) {
+      await runBenchmarkForBehavior(entities, behavior, nameFilter);
+    }
+  }
 }
 
 start().catch(console.error);

@@ -336,27 +336,26 @@ export function update(
 }
 
 // Insertion Sort range helper
-function insertionSortRange(left: i32, right: i32): void {
-  const localIndices = indices;
+function insertionSortRange(arr: StaticArray<i32>, left: i32, right: i32): void {
   const localPosX = posX;
   for (let i = left + 1; i <= right; i++) {
-    const currIdx = unchecked(localIndices[i]);
+    const currIdx = unchecked(arr[i]);
     const currX = unchecked(localPosX[currIdx]);
     let j = i - 1;
     while (j >= left) {
-      const prevIdx = unchecked(localIndices[j]);
+      const prevIdx = unchecked(arr[j]);
       if (unchecked(localPosX[prevIdx]) <= currX) break;
-      unchecked(localIndices[j + 1] = prevIdx);
+      unchecked(arr[j + 1] = prevIdx);
       j--;
     }
-    unchecked(localIndices[j + 1] = currIdx);
+    unchecked(arr[j + 1] = currIdx);
   }
 }
 
 // Quick Sort
 function quickSort(left: i32, right: i32): void {
   if (right - left < 12) {
-    insertionSortRange(left, right);
+    insertionSortRange(indices, left, right);
     return;
   }
   const pivotIdx = partition(left, right);
@@ -389,7 +388,7 @@ function partition(left: i32, right: i32): i32 {
 // Merge Sort (Ping-Pong / Double-Buffering)
 function mergeSortPingPongRec(src: StaticArray<i32>, dst: StaticArray<i32>, left: i32, right: i32): void {
   if (right - left < 12) {
-    insertionSortRange(left, right);
+    insertionSortRange(dst, left, right);
     for (let m = left; m <= right; m++) {
       unchecked(src[m] = dst[m]);
     }
