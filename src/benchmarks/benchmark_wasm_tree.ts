@@ -89,8 +89,9 @@ export class WasmTreeSimulator implements Simulator {
     if (behavior === 'wander') behaviorId = 1;
     else if (behavior === 'erratic') behaviorId = 2;
 
-    // Step 1 (Update movements), Step 2a/2b (Broadphase tree update/queries), and Step 3 (Narrowphase)
-    // are executed synchronously inside WebAssembly memory without crossing the JS-WASM boundary.
+    // Step 1 (Update movements), Step 2a/2b (Broadphase tree update/queries),
+    // and Step 3 (Narrowphase) are executed synchronously inside WebAssembly
+    // memory without crossing the JS-WASM boundary.
     const collisionCount = this.wasm.update(
       width,
       height,

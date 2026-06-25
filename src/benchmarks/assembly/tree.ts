@@ -390,8 +390,10 @@ export function getPairsBufferPtr(): usize { return changetype<usize>(pairsBuffe
 
 /**
  * Step 1: Update movements
- * Updates entity kinematics and boundary bounces in contiguous WebAssembly memory.
- * Checks whether an entity escaped its spatial leaf bounds and pushes escaping IDs to `moveBuffer`.
+ * - Updates entity kinematics and boundary bounces in contiguous WebAssembly
+ *   memory.
+ * - Checks whether an entity escaped its spatial leaf bounds and pushes
+ *   escaping IDs to `moveBuffer`.
  */
 function updateMovementTree(width: f64, height: f64, speedMultiplier: f64, behavior: i32, seed: u32): i32 {
   prng.setSeed(seed);
@@ -461,8 +463,9 @@ function updateMovementTree(width: f64, height: f64, speedMultiplier: f64, behav
 
 /**
  * Step 2a: Update tree (Broadphase)
- * Re-inserts moved entities into the flat AABB spatial tree.
- * Fat bounds margins (margin = 2.0) buffer minor movements, reducing how often tree leaves must be removed and re-inserted.
+ * - Re-inserts moved entities into the flat AABB spatial tree.
+ * - Fat bounds margins (margin = 2.0) buffer minor movements, reducing how
+ *   often tree leaves must be removed and re-inserted.
  */
 function updateDirtyLeaves(moveCount: i32): void {
   const margin: f64 = 2.0;
@@ -506,8 +509,10 @@ function updateDirtyLeaves(moveCount: i32): void {
 
 /**
  * Step 2b: Broadphase
- * Traverses the spatial AABB tree using an iterative stack (`mainStack`) to find overlapping bounding boxes.
- * Pre-allocated flat arrays (`treeLeft`, `treeRight`, `treeMinX`, etc.) eliminate pointer indirection overhead.
+ * - Traverses the spatial AABB tree using an iterative stack (`mainStack`) to
+ *   find overlapping bounding boxes.
+ * - Pre-allocated flat arrays (`treeLeft`, `treeRight`, `treeMinX`, etc.)
+ *   eliminate pointer indirection overhead.
  */
 function runBroadphaseTree(): i32 {
   if (treeRoot == -1 || unchecked(treeLeft[treeRoot]) == -1) return 0;
@@ -605,8 +610,9 @@ function runBroadphaseTree(): i32 {
 
 /**
  * Step 3: Narrowphase
- * Resolves exact circular overlaps and applies elastic collision impulses.
- * Direct array indexing by entity ID in bare-metal memory prevents runtime allocations.
+ * - Resolves exact circular overlaps and applies elastic collision impulses.
+ * - Direct array indexing by entity ID in bare-metal memory prevents runtime
+ *   allocations.
  */
 function resolvePhysics(pairCount: i32): i32 {
   const len = posX.length;

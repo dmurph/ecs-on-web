@@ -9,7 +9,8 @@ import type { Simulator, EntityState, RenderEntity } from '../simulator';
 import type { ECSData } from './benchmark_custom_ecs';
 
 /**
- * A highly optimized, flat pre-allocated AABB Tree using TypedArrays (SoA layout).
+ * A highly optimized, flat pre-allocated AABB Tree using TypedArrays (SoA
+ * layout).
  *
  * Instead of allocating TreeNode objects on the heap, all nodes are referenced
  * by integer indices in contiguous arrays.
@@ -266,7 +267,8 @@ export class FlatAABBTree {
 }
 
 /**
- * Refits the AABB bounds of an internal node to fully enclose its left and right children.
+ * Refits the AABB bounds of an internal node to fully enclose its left and
+ * right children.
  */
 function refitAABB(tree: FlatAABBTree, idx: number) {
   const l = tree.left[idx];
@@ -483,9 +485,12 @@ function queryOverlapFlatIter(
 
 /**
  * Step 1: Update movements
- * Updates entity coordinates sequentially in flat TypedArrays (`posX`, `posYwh`, `vx`, `vy`).
- * Checks whether an entity escaped its spatial leaf bounds and pushes escaping entity IDs to `outMoveBuffer`.
- * Streaming contiguous memory buffers keeps CPU L1/L2 cache lines warm compared to pointer-chasing OOP objects.
+ * - Updates entity coordinates sequentially in flat TypedArrays (`posX`,
+ *   `posYwh`, `vx`, `vy`).
+ * - Checks whether an entity escaped its spatial leaf bounds and pushes
+ *   escaping entity IDs to `outMoveBuffer`.
+ * - Streaming contiguous memory buffers keeps CPU L1/L2 cache lines warm
+ *   compared to pointer-chasing OOP objects.
  */
 export function updateMovement(
   posX: Float64Array,
@@ -587,8 +592,10 @@ export function updateMovement(
 
 /**
  * Step 2b: Broadphase
- * Traverses the spatial BVH tree to find candidate colliding pairs.
- * Uses a pre-allocated flat TypedArray tree (`FlatAABBTree`) and an iterative stack (`mainStack`) to eliminate recursion overhead and pointer indirection.
+ * - Traverses the spatial BVH tree to find candidate colliding pairs.
+ * - Uses a pre-allocated flat TypedArray tree (`FlatAABBTree`) and an iterative
+ *   stack (`mainStack`) to eliminate recursion overhead and pointer
+ *   indirection.
  */
 export function runBroadphase(
   tree: FlatAABBTree,
@@ -656,8 +663,10 @@ export function runBroadphase(
 
 /**
  * Step 2a: Update tree (Broadphase)
- * Re-computes bounding boxes and re-inserts entities that moved outside their "fat bounds" margin.
- * Storing tree nodes in flat contiguous arrays (`minX`, `minY`, `maxX`, `maxY`) avoids GC pressure and pointer dereferencing during tree updates.
+ * - Re-computes bounding boxes and re-inserts entities that moved outside their
+ *   "fat bounds" margin.
+ * - Storing tree nodes in flat contiguous arrays (`minX`, `minY`, `maxX`,
+ *   `maxY`) avoids GC pressure and pointer dereferencing during tree updates.
  */
 export function updateTree(
   tree: FlatAABBTree,
@@ -710,8 +719,10 @@ export function updateTree(
 
 /**
  * Step 3: Narrowphase
- * Resolves exact circle-to-circle collisions and bounce velocity impulses (SoA style).
- * Accesses component data directly by entity ID index in contiguous buffers, avoiding heap object allocation.
+ * - Resolves exact circle-to-circle collisions and bounce velocity impulses
+ *   (SoA style).
+ * - Accesses component data directly by entity ID index in contiguous buffers,
+ *   avoiding heap object allocation.
  */
 export function resolveCollisions(
   posX: Float64Array,
@@ -792,7 +803,8 @@ export function resolveCollisions(
 }
 
 /**
- * Simulator representing a Custom flat ECS engine using a pre-allocated flat AABB Tree for broadphase.
+ * Simulator representing a Custom flat ECS engine using a pre-allocated flat
+ * AABB Tree for broadphase.
  */
 export class ECSTreeSimulator implements Simulator {
   private ecsData: ECSData | null = null;

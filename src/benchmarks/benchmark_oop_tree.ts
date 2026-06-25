@@ -338,9 +338,111 @@ function balance(tree: AABBTree, i: TreeNode): TreeNode {
 }
 
 /**
+ * Step 1: Update movements
+ * - Updates positions for traditional OOP objects (`TreeGameEntity`) scattered
+ *   across heap memory.
+ * - Checks whether an entity escaped its cached leaf bounding box and pushes
+ *   escaping nodes to `outMoveBuffer` for spatial tree re-insertion.
+ */
+export function updateMovement(
+  entities: TreeGameEntity[],
+  canvasWidth: number,
+  canvasHeight: number,
+  speedMultiplier: number,
+  behavior: string,
+  prng: SeededPRNG,
+  outMoveBuffer: TreeGameEntity[],
+) {
+  const len = entities.length;
+  outMoveBuffer.length = 0; // Clear it
+
+  if (behavior === 'wander') {
+    for (let i = 0; i < len; i++) {
+      const entity = entities[i];
+      entity.angle += (prng.next() - 0.5) * 0.4;
+      entity.vx = Math.cos(entity.angle) * 1.2 * speedMultiplier;
+      entity.vy = Math.sin(entity.angle) * 1.2 * speedMultiplier;
+
+      entity.x += entity.vx;
+      entity.y += entity.vy;
+
+      let bounced = false;
+
+      if (entity.x < 0) {
+        entity.x = 0;
+        entity.angle = Math.PI - entity.angle;
+        bounced = true;
+      } else if (entity.x + entity.w > canvasWidth) {
+        entity.x = canvasWidth - entity.w;
+        entity.angle = Math.PI - entity.angle;
+        bounced = true;
+      }
+
+      if (entity.y < 0) {
+        entity.y = 0;
+        entity.angle = -entity.angle;
+        bounced = true;
+      } else if (entity.y + entity.h > canvasHeight) {
+        entity.y = canvasHeight - entity.h;
+        entity.angle = -entity.angle;
+        bounced = true;
+      }
+
+      if (bounced) {
+        entity.vx = Math.cos(entity.angle) * 1.2 * speedMultiplier;
+        entity.vy = Math.sin(entity.angle) * 1.2 * speedMultiplier;
+      }
+
+      // Check bounds: mark entity for re-insertion if it escapes its cached leaf bounds
+      const leaf = entity.leaf;
+      if (leaf) {
+        const minX = entity.x;
+        const minY = entity.y;
+        const maxX = entity.x + entity.w;
+        const maxY = entity.y + entity.h;
+        if (
+          minX < leaf.aabb.minX ||
+          maxX > leaf.aabb.maxX ||
+          minY < leaf.aabb.minY ||
+          maxY > leaf.aabb.maxY
+        ) {
+          outMoveBuffer.push(entity);
+        }
+      }
+    }
+  } else if (behavior === 'erratic') {
+    for (let i = 0; i < len; i++) {
+      const entity = entities[i];
+      entity.x = prng.next() * (canvasWidth - entity.w);
+      entity.y = prng.next() * (canvasHeight - entity.h);
+
+      // Check bounds
+      const leaf = entity.leaf;
+      if (leaf) {
+        const minX = entity.x;
+        const minY = entity.y;
+        const maxX = entity.x + entity.w;
+        const maxY = entity.y + entity.h;
+        if (
+          minX < leaf.aabb.minX ||
+          maxX > leaf.aabb.maxX ||
+          minY < leaf.aabb.minY ||
+          maxY > leaf.aabb.maxY
+        ) {
+          outMoveBuffer.push(entity);
+        }
+      }
+    }
+  }
+}
+
+/**
  * Step 2a: Update tree (Broadphase)
- * Re-computes bounding boxes and re-inserts heap entities that moved outside their cached "fat bounds" margin.
- * Fat bounds margins (e.g., margin = 2.0) buffer minor entity movements, drastically reducing how often the spatial BVH must balance and restructure nodes.
+ * - Re-computes bounding boxes and re-inserts heap entities that moved outside
+ *   their cached "fat bounds" margin.
+ * - Fat bounds margins (e.g., margin = 2.0) buffer minor entity movements,
+ *   drastically reducing how often the spatial BVH must balance and restructure
+ *   nodes.
  */
 export function updateTree(
   tree: AABBTree,
@@ -452,106 +554,12 @@ function queryOverlapIter(
 }
 
 /**
- * Step 1: Update movements
- * Updates positions for traditional OOP objects (`TreeGameEntity`) scattered across heap memory.
- * Checks whether an entity escaped its cached leaf bounding box and pushes escaping nodes to `outMoveBuffer` for spatial tree re-insertion.
- */
-export function updateMovement(
-  entities: TreeGameEntity[],
-  canvasWidth: number,
-  canvasHeight: number,
-  speedMultiplier: number,
-  behavior: string,
-  prng: SeededPRNG,
-  outMoveBuffer: TreeGameEntity[],
-) {
-  const len = entities.length;
-  outMoveBuffer.length = 0; // Clear it
-
-  if (behavior === 'wander') {
-    for (let i = 0; i < len; i++) {
-      const entity = entities[i];
-      entity.angle += (prng.next() - 0.5) * 0.4;
-      entity.vx = Math.cos(entity.angle) * 1.2 * speedMultiplier;
-      entity.vy = Math.sin(entity.angle) * 1.2 * speedMultiplier;
-
-      entity.x += entity.vx;
-      entity.y += entity.vy;
-
-      let bounced = false;
-
-      if (entity.x < 0) {
-        entity.x = 0;
-        entity.angle = Math.PI - entity.angle;
-        bounced = true;
-      } else if (entity.x + entity.w > canvasWidth) {
-        entity.x = canvasWidth - entity.w;
-        entity.angle = Math.PI - entity.angle;
-        bounced = true;
-      }
-
-      if (entity.y < 0) {
-        entity.y = 0;
-        entity.angle = -entity.angle;
-        bounced = true;
-      } else if (entity.y + entity.h > canvasHeight) {
-        entity.y = canvasHeight - entity.h;
-        entity.angle = -entity.angle;
-        bounced = true;
-      }
-
-      if (bounced) {
-        entity.vx = Math.cos(entity.angle) * 1.2 * speedMultiplier;
-        entity.vy = Math.sin(entity.angle) * 1.2 * speedMultiplier;
-      }
-
-      // Check bounds: mark entity for re-insertion if it escapes its cached leaf bounds
-      const leaf = entity.leaf;
-      if (leaf) {
-        const minX = entity.x;
-        const minY = entity.y;
-        const maxX = entity.x + entity.w;
-        const maxY = entity.y + entity.h;
-        if (
-          minX < leaf.aabb.minX ||
-          maxX > leaf.aabb.maxX ||
-          minY < leaf.aabb.minY ||
-          maxY > leaf.aabb.maxY
-        ) {
-          outMoveBuffer.push(entity);
-        }
-      }
-    }
-  } else if (behavior === 'erratic') {
-    for (let i = 0; i < len; i++) {
-      const entity = entities[i];
-      entity.x = prng.next() * (canvasWidth - entity.w);
-      entity.y = prng.next() * (canvasHeight - entity.h);
-
-      // Check bounds
-      const leaf = entity.leaf;
-      if (leaf) {
-        const minX = entity.x;
-        const minY = entity.y;
-        const maxX = entity.x + entity.w;
-        const maxY = entity.y + entity.h;
-        if (
-          minX < leaf.aabb.minX ||
-          maxX > leaf.aabb.maxX ||
-          minY < leaf.aabb.minY ||
-          maxY > leaf.aabb.maxY
-        ) {
-          outMoveBuffer.push(entity);
-        }
-      }
-    }
-  }
-}
-
-/**
  * Step 2b: Broadphase
- * Traverses the dynamic spatial AABB tree (hierarchical BVH) to find overlapping bounding boxes.
- * While hierarchical trees have O(N log N) algorithmic complexity, traversing pointer-linked nodes (`node.left`, `node.right`) causes frequent CPU cache misses compared to streaming flat ECS arrays.
+ * - Traverses the dynamic spatial AABB tree (hierarchical BVH) to find
+ *   overlapping bounding boxes.
+ * - While hierarchical trees have O(N log N) algorithmic complexity, traversing
+ *   pointer-linked nodes (`node.left`, `node.right`) causes frequent CPU cache
+ *   misses compared to streaming flat ECS arrays.
  */
 export function runBroadphase(
   root: TreeNode | null,
@@ -607,7 +615,8 @@ export function runBroadphase(
 
 /**
  * Step 3: Narrowphase
- * Resolves exact circular collisions and bounce reactions for overlapping pairs discovered during BVH traversal.
+ * - Resolves exact circular collisions and bounce reactions for overlapping
+ *   pairs discovered during BVH traversal.
  */
 export function resolveCollisions(
   entities: TreeGameEntity[],
@@ -680,13 +689,14 @@ export function resolveCollisions(
 /**
  * Simulator representing an OOP model using a dynamic AABB Tree for broadphase.
  *
- * Data Layout: Array of Objects (AoS).
- * Each entity holds a direct reference to its corresponding AABB tree node (`leaf`).
- * Each leaf holds a direct reference back to the `entity`.
+ * - Data Layout: Array of Objects (AoS).
+ * - Each entity holds a direct reference to its corresponding AABB tree node
+ *   (`leaf`).
+ * - Each leaf holds a direct reference back to the `entity`.
  *
- * Algorithm: Dynamic AABB Tree with a fat margin (+2.0px).
- * Entities only trigger tree re-insertion when they move outside their fat margin,
- * allowing sub-linear updates during highly coherent motion.
+ * Algorithm: Dynamic AABB Tree with a fat margin (+2.0px). Entities only
+ * trigger tree re-insertion when they move outside their fat margin, allowing
+ * sub-linear updates during highly coherent motion.
  */
 export class OOPTreeSimulator implements Simulator {
   private entities: TreeGameEntity[] = [];
@@ -739,12 +749,14 @@ export class OOPTreeSimulator implements Simulator {
   /**
    * Executes a full simulation step, timing all operations:
    * 1. Movement updates (updating entity positions).
-   * 2. Tree updates (re-calculating bounds and re-inserting nodes that escaped fat margins).
+   * 2. Tree updates (re-calculating bounds and re-inserting nodes that escaped
+   *    fat margins).
    * 3. AABB tree broadphase (recursive overlap search between branches/leaves).
    * 4. Narrowphase resolution (circle overlap checks and bounce impulses).
    *
-   * This measures the algorithmic benefit of dynamic AABB trees (sub-linear broadphase updates)
-   * vs the overhead of tree traversal pointers and AoS heap lookups.
+   * This measures the algorithmic benefit of dynamic AABB trees (sub-linear
+   * broadphase updates) vs the overhead of tree traversal pointers and AoS heap
+   * lookups.
    */
   update(
     width: number,

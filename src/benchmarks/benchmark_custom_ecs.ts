@@ -19,9 +19,11 @@ export function createECSData(
   canvasWidth: number,
   canvasHeight: number,
 ): ECSData {
-  // posX is isolated to optimize cache line utilization during Sweep-and-Prune sorting
+  // posX is isolated to optimize cache line utilization during Sweep-and-Prune
+  // sorting
   const posX = new Float64Array(numEntities);
-  // posYwh is packed [y, w, h] to load components together during Y-overlap checks
+  // posYwh is packed [y, w, h] to load components together during Y-overlap
+  // checks
   const posYwh = new Float64Array(numEntities * 3);
   const colorId = new Uint8Array(numEntities);
   const angle = new Float64Array(numEntities);
@@ -49,9 +51,11 @@ export function createECSData(
 
 /**
  * Step 1: Update movements
- * Updates entity positions and handles boundary collisions.
- * In this Custom ECS (Structure of Arrays), component properties (`posX`, `posYwh`, `vx`, `vy`) are stored in flat TypedArrays.
- * Sequential access across contiguous memory buffers maximizes CPU cache line efficiency (L1/L2 cache hits) compared to OOP pointer chasing.
+ * - Updates entity positions and handles boundary collisions.
+ * - In this Custom ECS (Structure of Arrays), component properties (`posX`,
+ *   `posYwh`, `vx`, `vy`) are stored in flat TypedArrays.
+ * - Sequential access across contiguous memory buffers maximizes CPU cache line
+ *   efficiency (L1/L2 cache hits) compared to OOP pointer chasing.
  */
 export function updateMovement(
   ecsData: ECSData,
@@ -114,9 +118,11 @@ export function updateMovement(
 
 /**
  * Step 2: Broadphase
- * Sweep & Prune broadphase collision detection.
- * Sorts 1D entity indices along the X-axis using `posX`, then sweeps for overlapping bounding boxes.
- * Contiguous memory streaming in flat arrays consistently outperforms pointer-chasing in dynamic spatial trees.
+ * - Sweep & Prune broadphase collision detection.
+ * - Sorts 1D entity indices along the X-axis using `posX`, then sweeps for
+ *   overlapping bounding boxes.
+ * - Contiguous memory streaming in flat arrays consistently outperforms
+ *   pointer-chasing in dynamic spatial trees.
  */
 export function runBroadphase(
   indices: Int32Array,
@@ -171,8 +177,9 @@ export function runBroadphase(
 
 /**
  * Step 3: Narrowphase
- * Resolves exact circle-circle collisions and velocity bounce reactions.
- * Uses candidate pairs from broadphase to index directly into component TypedArrays, calculating overlap impulses without object allocations.
+ * - Resolves exact circle-circle collisions and velocity bounce reactions.
+ * - Uses candidate pairs from broadphase to index directly into component
+ *   TypedArrays, calculating overlap impulses without object allocations.
  */
 export function resolveCollisions(
   ecs: ECSData,
@@ -245,13 +252,15 @@ export function resolveCollisions(
 /**
  * Simulator representing a custom lightweight Entity Component System (ECS).
  *
- * Data Layout: Struct of Arrays (SoA).
- * Component data is stored in flat TypedArrays (`posX`, `posYwh`, `vx`, `vy`, `angle`, `colorId`).
- * Accessing components is done by index (entity ID), ensuring contiguous memory
- * reads during systems execution, maximizing CPU cache line usage (L1/L2 hits).
+ * - Data Layout: Struct of Arrays (SoA).
+ * - Component data is stored in flat TypedArrays (`posX`, `posYwh`, `vx`, `vy`,
+ *   `angle`, `colorId`).
+ * - Accessing components is done by index (entity ID), ensuring contiguous
+ *   memory reads during systems execution, maximizing CPU cache line usage
+ *   (L1/L2 hits).
  *
- * Algorithm: Sweep-and-Prune (S&P) using 1D Insertion Sort of entity index array,
- * checking bounds by indexing directly into component arrays.
+ * Algorithm: Sweep-and-Prune (S&P) using 1D Insertion Sort of entity index
+ * array, checking bounds by indexing directly into component arrays.
  */
 export class CustomECSSimulator implements Simulator {
   private sortMethod: SortMethod;
@@ -285,11 +294,14 @@ export class CustomECSSimulator implements Simulator {
   /**
    * Executes a full simulation step, timing all operations:
    * 1. Movement updates (updatingposX, posYwh TypedArrays sequentially).
-   * 2. Sweep-and-Prune broadphase (sorting indices array using posX elements, and sweeping bounds).
-   * 3. Narrowphase resolution (indexing components using colliding pairs to calculate bounces).
+   * 2. Sweep-and-Prune broadphase (sorting indices array using posX elements,
+   *    and sweeping bounds).
+   * 3. Narrowphase resolution (indexing components using colliding pairs to
+   *    calculate bounces).
    *
-   * This measures the benefits of SoA cache alignment: sequential reads/writes are L1 cache friendly,
-   * even though indices mapping causes slight indirection during the sweep.
+   * This measures the benefits of SoA cache alignment: sequential reads/writes
+   * are L1 cache friendly, even though indices mapping causes slight
+   * indirection during the sweep.
    */
   update(
     width: number,

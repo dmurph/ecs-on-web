@@ -14,9 +14,11 @@ export interface BitecsStore {
 
 /**
  * Step 1: Update movements
- * Updates entity positions and handles boundary bounces using bitECS component stores.
- * In bitECS, component properties (`PositionX`, `PositionYwh`, `Physics`) are backed by flat TypedArrays (Structure of Arrays).
- * Iterating over entity IDs accesses contiguous memory, keeping CPU L1/L2 cache lines warm.
+ * - Updates entity positions and handles boundary bounces using bitECS
+ *   component stores.
+ * - In bitECS, component properties (`PositionX`, `PositionYwh`, `Physics`) are
+ *   backed by flat TypedArrays (Structure of Arrays).
+ * - Iterating over entity IDs accesses contiguous memory, keeping CPU L1/L2 cache lines warm.
  */
 export function updateMovement(
   store: BitecsStore,
@@ -179,8 +181,9 @@ export function runBroadphase(
 
 /**
  * Step 3: Narrowphase
- * Resolves exact circle overlaps and applies bounce velocity impulses.
- * Indexes directly into bitECS TypedArray component stores using candidate collision pairs.
+ * - Resolves exact circle overlaps and applies bounce velocity impulses.
+ * - Indexes directly into bitECS TypedArray component stores using candidate
+ *   collision pairs.
  */
 export function resolveCollisions(
   store: BitecsStore,
@@ -259,12 +262,13 @@ export function resolveCollisions(
 /**
  * Simulator representing a highly optimized third-party ECS framework (bitECS).
  *
- * Data Layout: Struct of Arrays (SoA).
- * Component arrays are allocated globally in flat TypedArrays by bitECS.
- * Entities are represented as integer IDs (indices) which map directly to component arrays.
+ * - Data Layout: Struct of Arrays (SoA).
+ * - Component arrays are allocated globally in flat TypedArrays by bitECS.
+ * - Entities are represented as integer IDs (indices) which map directly to
+ *   component arrays.
  *
- * Algorithm: Sweep-and-Prune (S&P) using 1D Insertion Sort of integer entity array,
- * querying coordinates directly via component typed arrays.
+ * Algorithm: Sweep-and-Prune (S&P) using 1D Insertion Sort of integer entity
+ * array, querying coordinates directly via component typed arrays.
  */
 export class BitECSSimulator implements Simulator {
   private sortType: 'insertion' | 'quick' | 'merge' | 'native';

@@ -65,8 +65,10 @@ export function getPairsBufferPtr(): usize { return changetype<usize>(pairsBuffe
 
 /**
  * Step 1: Update movements
- * Updates entity positions and handles boundary bounces in bare-metal WebAssembly memory.
- * StaticArray component stores (`posX`, `posYwh`, `vx`, `vy`) ensure strict contiguous memory layout without runtime GC pauses.
+ * - Updates entity positions and handles boundary bounces in bare-metal
+ *   WebAssembly memory.
+ * - StaticArray component stores (`posX`, `posYwh`, `vx`, `vy`) ensure strict
+ *   contiguous memory layout without runtime GC pauses.
  */
 export function updateMovement(
   width: f64,
@@ -142,9 +144,12 @@ export function updateMovement(
 
 /**
  * Step 2a: Broadphase (Sweep & Prune Sort)
- * Sorts 1D entity indices along the X-axis.
- * Supports Insertion Sort (optimal for smooth wandering motion), Quicksort, and zero-copy Merge Sort.
- * Merge Sort is recommended as the engine default because it guarantees consistent O(N log N) performance during chaotic or erratic motion, preventing O(N^2) quadratic meltdowns.
+ * - Sorts 1D entity indices along the X-axis.
+ * - Supports Insertion Sort (optimal for smooth wandering motion), Quicksort,
+ *   and zero-copy Merge Sort.
+ * - Merge Sort is recommended as the engine default because it guarantees
+ *   consistent O(N log N) performance during chaotic or erratic motion,
+ *   preventing O(N^2) quadratic meltdowns.
  */
 export function runBroadphaseSort(sortType: i32): void {
   const localIndices = indices;
@@ -176,8 +181,10 @@ export function runBroadphaseSort(sortType: i32): void {
 
 /**
  * Step 2b: Broadphase (Sweep & Prune Sweep)
- * Sweeps adjacent sorted entities to find overlapping bounding boxes on X and Y axes.
- * Streaming contiguous memory sequentially maximizes CPU L1 cache line utilization.
+ * - Sweeps adjacent sorted entities to find overlapping bounding boxes on X and
+ *   Y axes.
+ * - Streaming contiguous memory sequentially maximizes CPU L1 cache line
+ *   utilization.
  */
 export function runBroadphaseSweep(): i32 {
   const localIndices = indices;
@@ -222,8 +229,10 @@ export function runBroadphaseSweep(): i32 {
 
 /**
  * Step 3: Narrowphase (Physics Solver)
- * Resolves exact circle-to-circle collisions and applies elastic bounce impulses.
- * Accesses component data directly by entity ID index in bare-metal StaticArray memory.
+ * - Resolves exact circle-to-circle collisions and applies elastic bounce
+ *   impulses.
+ * - Accesses component data directly by entity ID index in bare-metal
+ *   StaticArray memory.
  */
 export function resolvePhysics(pairCount: i32): i32 {
   const localPosX = posX;

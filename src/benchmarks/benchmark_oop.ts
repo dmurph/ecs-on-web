@@ -40,9 +40,13 @@ export class GameEntity {
 
 /**
  * Step 1: Update movements
- * Iterates through entities to update positions based on velocity and handle boundary bounces.
- * In traditional OOP, each entity is a separately allocated heap object (`GameEntity`).
- * Traversing `entitiesById` involves chasing object references scattered across memory, which causes frequent CPU cache misses compared to streaming flat ECS arrays.
+ * - Iterates through entities to update positions based on velocity and handle
+ *   boundary bounces.
+ * - In traditional OOP, each entity is a separately allocated heap object
+ *   (`GameEntity`).
+ * - Traversing `entitiesById` involves chasing object references scattered
+ *   across memory, which causes frequent CPU cache misses compared to streaming
+ *   flat ECS arrays.
  */
 export function updateMovement(
   entitiesById: GameEntity[],
@@ -101,9 +105,12 @@ export function updateMovement(
 
 /**
  * Step 2: Broadphase
- * Identifies potential collision pairs by checking bounding box intersections (Sweep & Prune).
- * Sorts entities along the X-axis, then sweeps adjacent entities until their X coordinates no longer overlap.
- * Sorting and sweeping OOP objects requires dereferencing pointers to access `.x`, `.w`, `.y`, and `.h`, incurring memory indirection overhead.
+ * - Identifies potential collision pairs by checking bounding box intersections
+ *   (Sweep & Prune).
+ * - Sorts entities along the X-axis, then sweeps adjacent entities until their
+ *   X coordinates no longer overlap.
+ * - Sorting and sweeping OOP objects requires dereferencing pointers to access
+ *   `.x`, `.w`, `.y`, and `.h`, incurring memory indirection overhead.
  */
 export function runBroadphase(
   entities: GameEntity[],
@@ -147,8 +154,10 @@ export function runBroadphase(
 
 /**
  * Step 3: Narrowphase
- * Resolves exact circle-to-circle collisions and applies elastic bounce impulses.
- * For each candidate overlap from the broadphase, calculates exact Euclidean distance and updates velocity vectors.
+ * - Resolves exact circle-to-circle collisions and applies elastic bounce
+ *   impulses.
+ * - For each candidate overlap from the broadphase, calculates exact Euclidean
+ *   distance and updates velocity vectors.
  */
 export function resolveCollisions(
   entities: GameEntity[],
@@ -227,10 +236,11 @@ export function resolveCollisions(
 /**
  * Simulator representing a traditional Object-Oriented Programming (OOP) model.
  *
- * Data Layout: Array of Objects (AoS).
- * Each entity is an instance of `GameEntity` allocated on the heap.
- * The entities array is shuffled after creation to simulate memory fragmentation
- * and reference scattering (cache misses) common in long-running OOP games.
+ * - Data Layout: Array of Objects (AoS).
+ * - Each entity is an instance of `GameEntity` allocated on the heap.
+ * - The entities array is shuffled after creation to simulate memory
+ *   fragmentation and reference scattering (cache misses) common in
+ *   long-running OOP games.
  *
  * Algorithm: Sweep-and-Prune (S&P) using 1D Insertion Sort along the X-axis.
  */
@@ -273,10 +283,11 @@ export class OOPSimulator implements Simulator {
    * Executes a full simulation step, timing all operations:
    * 1. Movement updates (random walks or straight trajectories).
    * 2. Sweep-and-Prune broadphase (sorting along X axis and overlapping sweep).
-   * 3. Narrowphase resolution (resolving circle bounces and updating velocities).
+   * 3. Narrowphase resolution (resolving circle bounces and updating
+   *    velocities).
    *
-   * We time all three steps because memory lookup overhead affects both broadphase sorting
-   * and narrowphase object access patterns.
+   * We time all three steps because memory lookup overhead affects both
+   * broadphase sorting and narrowphase object access patterns.
    */
   update(
     width: number,
@@ -341,7 +352,8 @@ export class OOPSimulator implements Simulator {
   }
 
   /**
-   * Overwrites entity states. Used to align starting conditions across simulators.
+   * Overwrites entity states. Used to align starting conditions across
+   * simulators.
    */
   setPositions(positions: EntityState[]) {
     for (let i = 0; i < this.entitiesById.length; i++) {
