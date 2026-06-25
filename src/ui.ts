@@ -420,7 +420,7 @@ export function setupUIListeners(callbacks: UICallbacks) {
     const grid = document.querySelector('.visualizer-grid');
     btnToggleVisualizer.textContent = isVisualizerVisible
       ? 'Hide Visualizations'
-      : 'Show Visualizations!';
+      : 'Show Bouncing Balls!';
     if (grid) grid.classList.toggle('hidden', !isVisualizerVisible);
 
     btnToggleVisualizer.addEventListener('click', () => {
@@ -435,7 +435,7 @@ export function setupUIListeners(callbacks: UICallbacks) {
       } catch (e) {}
       btnToggleVisualizer.textContent = isVisualizerVisible
         ? 'Hide Visualizations'
-        : 'Show Visualizations!';
+        : 'Show Bouncing Balls!';
       if (grid) {
         grid.classList.toggle('hidden', !isVisualizerVisible);
         if (isVisualizerVisible) {

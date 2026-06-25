@@ -8,7 +8,7 @@
   --font-mono: 'JetBrains Mono', monospace;
 
   /* Clean Light Theme */
-  --bg-app: #f8fafc;
+  --bg-app: #ffffff;
   --bg-card: #ffffff;
   --bg-input: #f1f5f9;
   --border-color: #e2e8f0;
@@ -901,11 +901,11 @@ body.is-embedded .app-container {
   margin: 0;
   max-width: 100%;
   box-shadow: none;
-  background-color: transparent;
+  background-color: #ffffff;
 }
 
 body.is-embedded {
-  background-color: transparent;
+  background-color: #ffffff;
   overflow: hidden;
 }
 
