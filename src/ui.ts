@@ -140,17 +140,10 @@ function generatePresets(onSelectPreset: (preset: PresetConfig) => void) {
 }
 
 function generateMetricCards(activeSimulatorIds?: string[]) {
-  const container = document.querySelector('.metrics-grid')!;
+  const container = document.getElementById('metrics-cards-pack');
   if (!container) return;
+  container.replaceChildren();
 
-  const cards = container.querySelectorAll('.metric-card');
-  cards.forEach((card) => {
-    if (!card.classList.contains('speedup-card')) {
-      card.remove();
-    }
-  });
-
-  const speedupCard = container.querySelector('.speedup-card')!;
   SIMULATOR_REGISTRY.forEach((sim) => {
     const card = document.createElement('div');
     card.className = `metric-card ${sim.id}-card`;
@@ -222,7 +215,7 @@ function generateMetricCards(activeSimulatorIds?: string[]) {
     });
 
     card.appendChild(valuesDiv);
-    container.insertBefore(card, speedupCard);
+    container.appendChild(card);
   });
 }
 

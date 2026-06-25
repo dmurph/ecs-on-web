@@ -238,6 +238,15 @@ input[type='range'] {
   flex-wrap: wrap;
   gap: 10px;
   min-height: 180px;
+  align-items: flex-start;
+}
+
+.metrics-cards-pack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex: 1 1 300px;
+  min-width: 0;
 }
 
 .metric-card {
@@ -313,7 +322,8 @@ input[type='range'] {
 .speedup-card {
   border-color: rgba(59, 130, 246, 0.4);
   min-width: 320px;
-  max-width: 330px;
+  max-width: max-content;
+  flex: 0 0 auto;
 }
 
 .speedup-header {
