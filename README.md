@@ -2,8 +2,8 @@
 
 An interactive, real-time performance benchmark comparing **Object-Oriented Programming (OOP)** and **Data-Oriented Entity Component System (ECS)** architectures, implemented in both Javascript and WebAssembly (via AssemblyScript). The benchmark uses a Sweep-and-Prune collision detection algorithm as well as spatial trees to measure performance characteristics.
 
-* 🌐 **Live Interactive Demo:** [dmurph.github.io/ecs-on-web/](https://dmurph.github.io/ecs-on-web/)
-* 📖 **Write-up / Blog Post:** [ECS vs. OOP Benchmark on dmurph.com](https://www.dmurph.com/posts/2026/06/ecs_vs_oop_benchmark/ecs_vs_oop_benchmark.html)
+- 🌐 **Live Interactive Demo:** [dmurph.github.io/ecs-on-web/](https://dmurph.github.io/ecs-on-web/)
+- 📖 **Write-up / Blog Post:** [ECS vs. OOP Benchmark on dmurph.com](https://www.dmurph.com/posts/2026/06/ecs_vs_oop_benchmark/ecs_vs_oop_benchmark.html)
 
 ## Overview
 

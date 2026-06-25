@@ -30,6 +30,10 @@
   --color-success: #16a34a;
   --color-warning: #d97706;
 
+  --bg-input-highlight: #eff6ff;
+  --border-highlight: #bfdbfe;
+  --text-highlight: #1e40af;
+
   --border-radius: 0px;
   --max-width: 100%;
 }
@@ -200,6 +204,23 @@ input[type='range'] {
   background-color: var(--border-color);
   color: var(--color-text-dim);
   cursor: not-allowed;
+}
+
+.btn-highlight {
+  background-color: var(--bg-input-highlight);
+  border: 1px solid var(--border-highlight);
+  color: var(--text-highlight);
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-highlight:hover {
+  background-color: #dbeafe;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+.btn-highlight:active {
+  background-color: #bfdbfe;
 }
 
 .btn-secondary {
@@ -469,10 +490,14 @@ input[type='range'] {
   margin-left: 5px;
   margin-right: 5px;
   margin-bottom: 15px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 8px;
 }
 
 .output-header h2 {
   margin-bottom: 0;
+  border-bottom: none;
+  padding-bottom: 0;
 }
 
 .btn-sm {
