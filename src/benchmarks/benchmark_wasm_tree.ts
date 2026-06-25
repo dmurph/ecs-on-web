@@ -14,13 +14,18 @@ export class WasmTreeSimulator implements Simulator {
   private times: number[] = [];
   private renderEntities: RenderEntity[] = [];
 
-  init(numEntities: number, _width: number, _height: number, _prng: SeededPRNG) {
+  init(
+    numEntities: number,
+    _width: number,
+    _height: number,
+    _prng: SeededPRNG,
+  ) {
     const instance = new WebAssembly.Instance(wasmModule, {
       env: {
         abort: (msg: any, file: any, line: any, col: any) => {
           console.error(`abort called: ${msg} at ${file}:${line}:${col}`);
-        }
-      }
+        },
+      },
     });
     this.wasm = instance.exports as any;
 
@@ -28,13 +33,41 @@ export class WasmTreeSimulator implements Simulator {
     this.wasm.init(numEntities, maxCollisions);
 
     const memoryBuffer = (this.wasm.memory as WebAssembly.Memory).buffer;
-    const posX = new Float64Array(memoryBuffer, this.wasm.getPosXPtr(), numEntities);
-    const posYwh = new Float64Array(memoryBuffer, this.wasm.getPosYwhPtr(), numEntities * 3);
-    const colorId = new Uint8Array(memoryBuffer, this.wasm.getColorIdPtr(), numEntities);
-    const vx = new Float64Array(memoryBuffer, this.wasm.getVxPtr(), numEntities);
-    const vy = new Float64Array(memoryBuffer, this.wasm.getVyPtr(), numEntities);
-    const angle = new Float64Array(memoryBuffer, this.wasm.getAnglePtr(), numEntities);
-    const indices = new Int32Array(memoryBuffer, this.wasm.getIndicesPtr(), numEntities);
+    const posX = new Float64Array(
+      memoryBuffer,
+      this.wasm.getPosXPtr(),
+      numEntities,
+    );
+    const posYwh = new Float64Array(
+      memoryBuffer,
+      this.wasm.getPosYwhPtr(),
+      numEntities * 3,
+    );
+    const colorId = new Uint8Array(
+      memoryBuffer,
+      this.wasm.getColorIdPtr(),
+      numEntities,
+    );
+    const vx = new Float64Array(
+      memoryBuffer,
+      this.wasm.getVxPtr(),
+      numEntities,
+    );
+    const vy = new Float64Array(
+      memoryBuffer,
+      this.wasm.getVyPtr(),
+      numEntities,
+    );
+    const angle = new Float64Array(
+      memoryBuffer,
+      this.wasm.getAnglePtr(),
+      numEntities,
+    );
+    const indices = new Int32Array(
+      memoryBuffer,
+      this.wasm.getIndicesPtr(),
+      numEntities,
+    );
     const id = new Int32Array(memoryBuffer, this.wasm.getIdPtr(), numEntities);
 
     this.ecsData = { posX, posYwh, colorId, angle, vx, vy, indices, id };
@@ -49,7 +82,7 @@ export class WasmTreeSimulator implements Simulator {
     height: number,
     speedMultiplier: number,
     behavior: string,
-    prng: SeededPRNG
+    prng: SeededPRNG,
   ): { time: number; collisionCount: number } {
     const start = performance.now();
     let behaviorId = 0; // static
@@ -63,7 +96,7 @@ export class WasmTreeSimulator implements Simulator {
       height,
       speedMultiplier,
       behaviorId,
-      prng.seed
+      prng.seed,
     );
 
     const end = performance.now();
@@ -88,8 +121,12 @@ export class WasmTreeSimulator implements Simulator {
     return this.renderEntities;
   }
 
-  getTimes() { return this.times; }
-  clearTimes() { this.times = []; }
+  getTimes() {
+    return this.times;
+  }
+  clearTimes() {
+    this.times = [];
+  }
 
   getPositions(): EntityState[] {
     if (!this.ecsData) return [];
@@ -105,7 +142,7 @@ export class WasmTreeSimulator implements Simulator {
         vx: vx[i],
         vy: vy[i],
         angle: angle[i],
-        color: ENTITY_COLORS[colorId[i]]
+        color: ENTITY_COLORS[colorId[i]],
       };
     }
     return result;

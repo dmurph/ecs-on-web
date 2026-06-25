@@ -16,37 +16,68 @@ export class WasmECSSimulator implements Simulator {
   private times: number[] = [];
   private renderEntities: RenderEntity[] = [];
 
-  constructor(
-    sortMethod: SortMethod = SortMethod.Insertion
-  ) {
+  constructor(sortMethod: SortMethod = SortMethod.Insertion) {
     this.sortMethod = sortMethod;
   }
 
-  init(numEntities: number, _width: number, _height: number, _prng: SeededPRNG) {
+  init(
+    numEntities: number,
+    _width: number,
+    _height: number,
+    _prng: SeededPRNG,
+  ) {
     // Instantiate an independent WASM instance for this simulator to isolate memory/globals
     const instance = new WebAssembly.Instance(wasmModule, {
       env: {
         abort: (msg: any, file: any, line: any, col: any) => {
           console.error(`abort called: ${msg} at ${file}:${line}:${col}`);
-        }
-      }
+        },
+      },
     });
     this.wasm = instance.exports as any;
 
     const maxCollisions = 200000;
-    
+
     // Allocate buffers inside WASM
     this.wasm.init(numEntities, maxCollisions);
 
     // Get pointers and create JS views mapping to WASM memory
     const memoryBuffer = (this.wasm.memory as WebAssembly.Memory).buffer;
-    const posX = new Float64Array(memoryBuffer, this.wasm.getPosXPtr(), numEntities);
-    const posYwh = new Float64Array(memoryBuffer, this.wasm.getPosYwhPtr(), numEntities * 3);
-    const colorId = new Uint8Array(memoryBuffer, this.wasm.getColorIdPtr(), numEntities);
-    const vx = new Float64Array(memoryBuffer, this.wasm.getVxPtr(), numEntities);
-    const vy = new Float64Array(memoryBuffer, this.wasm.getVyPtr(), numEntities);
-    const angle = new Float64Array(memoryBuffer, this.wasm.getAnglePtr(), numEntities);
-    const indices = new Int32Array(memoryBuffer, this.wasm.getIndicesPtr(), numEntities);
+    const posX = new Float64Array(
+      memoryBuffer,
+      this.wasm.getPosXPtr(),
+      numEntities,
+    );
+    const posYwh = new Float64Array(
+      memoryBuffer,
+      this.wasm.getPosYwhPtr(),
+      numEntities * 3,
+    );
+    const colorId = new Uint8Array(
+      memoryBuffer,
+      this.wasm.getColorIdPtr(),
+      numEntities,
+    );
+    const vx = new Float64Array(
+      memoryBuffer,
+      this.wasm.getVxPtr(),
+      numEntities,
+    );
+    const vy = new Float64Array(
+      memoryBuffer,
+      this.wasm.getVyPtr(),
+      numEntities,
+    );
+    const angle = new Float64Array(
+      memoryBuffer,
+      this.wasm.getAnglePtr(),
+      numEntities,
+    );
+    const indices = new Int32Array(
+      memoryBuffer,
+      this.wasm.getIndicesPtr(),
+      numEntities,
+    );
     const id = new Int32Array(memoryBuffer, this.wasm.getIdPtr(), numEntities);
 
     this.ecsData = { posX, posYwh, colorId, angle, vx, vy, indices, id };
@@ -61,7 +92,7 @@ export class WasmECSSimulator implements Simulator {
     height: number,
     speedMultiplier: number,
     behavior: string,
-    prng: SeededPRNG
+    prng: SeededPRNG,
   ): { time: number; collisionCount: number } {
     const start = performance.now();
     let behaviorId = 0; // static
@@ -80,7 +111,7 @@ export class WasmECSSimulator implements Simulator {
       speedMultiplier,
       behaviorId,
       prng.seed,
-      sortTypeId
+      sortTypeId,
     );
 
     const end = performance.now();
@@ -127,7 +158,7 @@ export class WasmECSSimulator implements Simulator {
         vx: vx[i],
         vy: vy[i],
         angle: angle[i],
-        color: ENTITY_COLORS[colorId[i]]
+        color: ENTITY_COLORS[colorId[i]],
       };
     }
     return result;

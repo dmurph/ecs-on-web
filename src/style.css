@@ -2,7 +2,9 @@
    CSS DESIGN SYSTEM & TOKENS (SIMPLIFIED)
    ========================================== */
 :root {
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
+    sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
   /* Clean Light Theme */
@@ -10,7 +12,7 @@
   --bg-card: #ffffff;
   --bg-input: #f1f5f9;
   --border-color: #e2e8f0;
-  
+
   --color-text-primary: #0f172a;
   --color-text-secondary: #475569;
   --color-text-dim: #94a3b8;
@@ -23,7 +25,7 @@
   --color-bitecs: #0284c7;
   --color-wasm: #c026d3;
   --color-collision: #e11d48;
-  
+
   --color-accent: #2563eb;
   --color-success: #16a34a;
   --color-warning: #d97706;
@@ -161,7 +163,7 @@ select {
   outline: none;
 }
 
-input[type="range"] {
+input[type='range'] {
   width: 100%;
   accent-color: var(--color-accent);
 }
@@ -265,7 +267,6 @@ input[type="range"] {
   border-radius: 50%;
 }
 
-
 .metric-values {
   display: flex;
   flex-direction: column;
@@ -286,7 +287,6 @@ input[type="range"] {
 .metric-value {
   font-weight: 700;
 }
-
 
 /* Speedup Card */
 .speedup-card {
@@ -415,7 +415,6 @@ input[type="range"] {
   height: 4px;
   border-radius: 2px;
 }
-
 
 .chart-frame-counter {
   font-family: var(--font-mono);
@@ -567,7 +566,8 @@ canvas {
   font-size: 0.85rem;
 }
 
-.blog-table th, .blog-table td {
+.blog-table th,
+.blog-table td {
   padding: 8px 12px;
   border-bottom: 1px solid var(--border-color);
 }
@@ -582,11 +582,26 @@ canvas {
   border-bottom: none;
 }
 
-.blog-table .highlight-oop { color: var(--color-oop); font-weight: bold; }
-.blog-table .highlight-oop-tree { color: var(--color-oop-tree); font-weight: bold; }
-.blog-table .highlight-ecs { color: var(--color-ecs); font-weight: bold; }
-.blog-table .highlight-ecs-tree { color: var(--color-ecs-tree); font-weight: bold; }
-.blog-table .highlight-wasm { color: var(--color-wasm); font-weight: bold; }
+.blog-table .highlight-oop {
+  color: var(--color-oop);
+  font-weight: bold;
+}
+.blog-table .highlight-oop-tree {
+  color: var(--color-oop-tree);
+  font-weight: bold;
+}
+.blog-table .highlight-ecs {
+  color: var(--color-ecs);
+  font-weight: bold;
+}
+.blog-table .highlight-ecs-tree {
+  color: var(--color-ecs-tree);
+  font-weight: bold;
+}
+.blog-table .highlight-wasm {
+  color: var(--color-wasm);
+  font-weight: bold;
+}
 .blog-table .highlight-speedup {
   color: var(--color-text-primary);
   font-weight: bold;
@@ -611,9 +626,15 @@ canvas {
    ANIMATION KEYFRAMES
    ========================================== */
 @keyframes pulse-green {
-  0% { opacity: 0.6; }
-  50% { opacity: 1; }
-  100% { opacity: 0.6; }
+  0% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.6;
+  }
 }
 
 /* Padded sections for layout */
@@ -895,7 +916,7 @@ body.is-embedded {
   gap: 8px;
 }
 
-.canvas-header-left input[type="checkbox"] {
+.canvas-header-left input[type='checkbox'] {
   accent-color: var(--color-accent);
   cursor: pointer;
   width: 16px;
@@ -917,4 +938,3 @@ body.is-embedded {
 .hidden {
   display: none !important;
 }
-

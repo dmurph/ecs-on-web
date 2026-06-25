@@ -1,12 +1,22 @@
 import { createWorld } from 'bitecs';
 import { ENTITY_COLORS } from './src/config';
-import { GameEntity, runOOPBroadphase, resolveOOPPhysics, updateOOPMovement } from './src/benchmarks/benchmark_oop';
-import { createECSData, runECSBroadphase, resolveECSPhysics, updateECSMovement } from './src/benchmarks/benchmark_custom_ecs';
+import {
+  GameEntity,
+  runOOPBroadphase,
+  resolveOOPPhysics,
+  updateOOPMovement,
+} from './src/benchmarks/benchmark_oop';
+import {
+  createECSData,
+  runECSBroadphase,
+  resolveECSPhysics,
+  updateECSMovement,
+} from './src/benchmarks/benchmark_custom_ecs';
 import {
   createBitecsData,
   runBitecsBroadphase,
   resolveBitecsPhysics,
-  updateBitecsMovement
+  updateBitecsMovement,
 } from './src/benchmarks/benchmark_bitecs';
 import {
   AABBTree,
@@ -15,13 +25,15 @@ import {
   updateTree,
   runOOPTreeBroadphase,
   updateOOPTreeMovement,
-  resolveOOPTreePhysics
+  resolveOOPTreePhysics,
 } from './src/benchmarks/benchmark_oop_tree';
 import { SeededPRNG } from './src/prng';
 
 function runVerification() {
-  console.log("=== RUNNING BROADPHASE & NARROWPHASE COMPARISON VERIFICATION ===");
-  
+  console.log(
+    '=== RUNNING BROADPHASE & NARROWPHASE COMPARISON VERIFICATION ===',
+  );
+
   const numEntities = 200;
   const w = 1000;
   const h = 800;
@@ -30,7 +42,7 @@ function runVerification() {
   const prngOOPTree = new SeededPRNG();
   const prngECS = new SeededPRNG();
   const prngBitecs = new SeededPRNG();
-  
+
   // 1. Initialize OOP Entities
   const oopEntities: GameEntity[] = [];
   const oopEntitiesById: GameEntity[] = new Array(numEntities);
@@ -59,7 +71,12 @@ function runVerification() {
   const bitecsData = createBitecsData(bitecsWorld, numEntities, w, h);
   const bitecsEntities = bitecsData.entities;
   const bitecsSortedEntities = new Int32Array(bitecsEntities);
-  const { PositionX: bPositionX, PositionYwh: bPositionYwh, Physics: bPhysics, Style: bStyle } = bitecsData;
+  const {
+    PositionX: bPositionX,
+    PositionYwh: bPositionYwh,
+    Physics: bPhysics,
+    Style: bStyle,
+  } = bitecsData;
 
   // 4. Sync positions to ensure absolute identical starting datasets across all systems
   for (let i = 0; i < numEntities; i++) {
@@ -110,7 +127,7 @@ function runVerification() {
       entity.x - margin,
       entity.y - margin,
       entity.x + entity.w + margin,
-      entity.y + entity.h + margin
+      entity.y + entity.h + margin,
     );
     leaf.entity = entity;
     entity.leaf = leaf;
@@ -140,7 +157,9 @@ function runVerification() {
   // though high entity densities can cause slight narrowphase count variations (e.g. ±2)
   // even on Frame 1 due to order-dependent resolution paths rather than actual logic bugs.
   const testFrames = 1;
-  console.log(`Running simulation for ${testFrames} frame with ${numEntities} entities...`);
+  console.log(
+    `Running simulation for ${testFrames} frame with ${numEntities} entities...`,
+  );
 
   for (let frame = 1; frame <= testFrames; frame++) {
     const frameSeed = frame;
@@ -150,7 +169,15 @@ function runVerification() {
     prngBitecs.setSeed(frameSeed);
 
     updateOOPMovement(oopEntitiesById, w, h, 1.0, 'wander', prngOOP);
-    updateOOPTreeMovement(oopTreeEntities, w, h, 1.0, 'wander', prngOOPTree, treeMoveBuffer);
+    updateOOPTreeMovement(
+      oopTreeEntities,
+      w,
+      h,
+      1.0,
+      'wander',
+      prngOOPTree,
+      treeMoveBuffer,
+    );
     updateECSMovement(ecsData, w, h, 1.0, 'wander', prngECS);
     updateBitecsMovement(bitecsData, w, h, 1.0, 'wander', prngBitecs);
 
@@ -165,15 +192,22 @@ function runVerification() {
 
     // Run broadphase
     const oopPairsCount = runOOPBroadphase(oopEntities);
-    const oopTreePairsCount = runOOPTreeBroadphase(oopTree.root, oopTreePairsBuffer);
+    const oopTreePairsCount = runOOPTreeBroadphase(
+      oopTree.root,
+      oopTreePairsBuffer,
+    );
     const ecsPairsCount = runECSBroadphase(
       ecsData.indices,
       ecsData.posX,
       ecsData.posYwh,
       ecsPairsBuffer,
-      ecsData.id
+      ecsData.id,
     );
-    const bitecsPairsCount = runBitecsBroadphase(bitecsData, bitecsSortedEntities, bitecsPairsBuffer);
+    const bitecsPairsCount = runBitecsBroadphase(
+      bitecsData,
+      bitecsSortedEntities,
+      bitecsPairsBuffer,
+    );
 
     // Assert S&P-based systems match 100% on broadphase
     if (oopPairsCount !== ecsPairsCount || ecsPairsCount !== bitecsPairsCount) {
@@ -186,10 +220,12 @@ function runVerification() {
 
     // Assert AABB Tree matches S&P on broadphase
     if (oopPairsCount !== oopTreePairsCount) {
-      console.error(`❌ BROADPHASE VERIFICATION FAILED for OOP Tree on Frame ${frame}!`);
+      console.error(
+        `❌ BROADPHASE VERIFICATION FAILED for OOP Tree on Frame ${frame}!`,
+      );
       console.error(`   OOP S&P Pairs Count: ${oopPairsCount}`);
       console.error(`   OOP Tree Pairs Count: ${oopTreePairsCount}`);
-      
+
       const sAndPPairs = new Set<string>();
       for (let i = 0; i < oopEntities.length; i++) {
         const a = oopEntities[i];
@@ -197,48 +233,81 @@ function runVerification() {
           sAndPPairs.add(`${Math.min(a.id, b.id)}-${Math.max(a.id, b.id)}`);
         }
       }
-      
+
       const treePairs = new Set<string>();
       for (let i = 0; i < oopTreePairsCount; i++) {
         const a = oopTreePairsBuffer[i * 2];
         const b = oopTreePairsBuffer[i * 2 + 1];
-        treePairs.add(`${Math.min(a,b)}-${Math.max(a,b)}`);
+        treePairs.add(`${Math.min(a, b)}-${Math.max(a, b)}`);
       }
-      
-      console.log("Pairs in S&P but not in Tree:");
+
+      console.log('Pairs in S&P but not in Tree:');
       for (const p of sAndPPairs) {
         if (!treePairs.has(p)) {
           console.log(`  ${p}`);
           const [idA, idB] = p.split('-').map(Number);
           const a = oopEntitiesById[idA];
           const b = oopEntitiesById[idB];
-          console.log(`  Entity A (${idA}): pos=(${a.x.toFixed(4)}, ${a.y.toFixed(4)}), size=${a.w.toFixed(4)}`);
-          console.log(`  Entity B (${idB}): pos=(${b.x.toFixed(4)}, ${b.y.toFixed(4)}), size=${b.w.toFixed(4)}`);
+          console.log(
+            `  Entity A (${idA}): pos=(${a.x.toFixed(4)}, ${a.y.toFixed(4)}), size=${a.w.toFixed(4)}`,
+          );
+          console.log(
+            `  Entity B (${idB}): pos=(${b.x.toFixed(4)}, ${b.y.toFixed(4)}), size=${b.w.toFixed(4)}`,
+          );
           const leafA = (a as any).leaf;
           const leafB = (b as any).leaf;
-          if (leafA) console.log(`  Leaf A AABB: min=(${leafA.aabb.minX.toFixed(4)}, ${leafA.aabb.minY.toFixed(4)}), max=(${leafA.aabb.maxX.toFixed(4)}, ${leafA.aabb.maxY.toFixed(4)})`);
-          if (leafB) console.log(`  Leaf B AABB: min=(${leafB.aabb.minX.toFixed(4)}, ${leafB.aabb.minY.toFixed(4)}), max=(${leafB.aabb.maxX.toFixed(4)}, ${leafB.aabb.maxY.toFixed(4)})`);
+          if (leafA)
+            console.log(
+              `  Leaf A AABB: min=(${leafA.aabb.minX.toFixed(4)}, ${leafA.aabb.minY.toFixed(4)}), max=(${leafA.aabb.maxX.toFixed(4)}, ${leafA.aabb.maxY.toFixed(4)})`,
+            );
+          if (leafB)
+            console.log(
+              `  Leaf B AABB: min=(${leafB.aabb.minX.toFixed(4)}, ${leafB.aabb.minY.toFixed(4)}), max=(${leafB.aabb.maxX.toFixed(4)}, ${leafB.aabb.maxY.toFixed(4)})`,
+            );
         }
       }
-      
-      console.log("Pairs in Tree but not in S&P:");
+
+      console.log('Pairs in Tree but not in S&P:');
       for (const p of treePairs) {
         if (!sAndPPairs.has(p)) {
           console.log(`  ${p}`);
         }
       }
-      
+
       process.exit(1);
     }
 
     // Run narrowphase geometric resolution
-    const oopCollisionCount = resolveOOPPhysics(oopEntities, oopColliding, oopPairsBuffer);
-    const oopTreeCollisionCount = resolveOOPTreePhysics(oopTreeEntitiesById, oopTreePairsBuffer, oopTreePairsCount, oopTreeColliding);
-    const ecsCollisionCount = resolveECSPhysics(ecsData, ecsPairsBuffer, ecsPairsCount, ecsColliding);
-    const bitecsCollisionCount = resolveBitecsPhysics(bitecsData, bitecsPairsBuffer, bitecsPairsCount, bitecsColliding);
+    const oopCollisionCount = resolveOOPPhysics(
+      oopEntities,
+      oopColliding,
+      oopPairsBuffer,
+    );
+    const oopTreeCollisionCount = resolveOOPTreePhysics(
+      oopTreeEntitiesById,
+      oopTreePairsBuffer,
+      oopTreePairsCount,
+      oopTreeColliding,
+    );
+    const ecsCollisionCount = resolveECSPhysics(
+      ecsData,
+      ecsPairsBuffer,
+      ecsPairsCount,
+      ecsColliding,
+    );
+    const bitecsCollisionCount = resolveBitecsPhysics(
+      bitecsData,
+      bitecsPairsBuffer,
+      bitecsPairsCount,
+      bitecsColliding,
+    );
 
     // Assert all systems match 100% on narrowphase
-    if (oopCollisionCount !== ecsCollisionCount || ecsCollisionCount !== bitecsCollisionCount || oopCollisionCount !== oopTreeCollisionCount) {
+    if (
+      oopCollisionCount !== ecsCollisionCount ||
+      ecsCollisionCount !== bitecsCollisionCount ||
+      oopCollisionCount !== oopTreeCollisionCount
+    ) {
       console.error(`❌ NARROWPHASE VERIFICATION FAILED on Frame ${frame}!`);
       console.error(`   OOP S&P Collision Count: ${oopCollisionCount}`);
       console.error(`   OOP Tree Collision Count: ${oopTreeCollisionCount}`);
@@ -248,7 +317,9 @@ function runVerification() {
     }
   }
 
-  console.log("✅ VERIFICATION SUCCESSFUL: OOP Sweep-and-Prune, OOP Dynamic AABB Tree, Custom ECS, and bitECS broadphase and narrowphase algorithms returned correct results.");
+  console.log(
+    '✅ VERIFICATION SUCCESSFUL: OOP Sweep-and-Prune, OOP Dynamic AABB Tree, Custom ECS, and bitECS broadphase and narrowphase algorithms returned correct results.',
+  );
   process.exit(0);
 }
 

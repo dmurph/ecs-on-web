@@ -3,7 +3,7 @@ import type { RenderEntity } from './simulator';
 export function renderCanvas(
   canvas: HTMLCanvasElement,
   ctx: CanvasRenderingContext2D,
-  entities: RenderEntity[]
+  entities: RenderEntity[],
 ) {
   const w = canvas.width;
   const h = canvas.height;
@@ -27,7 +27,7 @@ export function renderCanvas(
   }
   ctx.stroke();
 
-  const fillOpacity = 'cc'; 
+  const fillOpacity = 'cc';
 
   // Draw entities
   for (let i = 0; i < entities.length; i++) {

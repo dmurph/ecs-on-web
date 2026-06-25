@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="An interactive real-time performance benchmark comparing Object-Oriented Programming (OOP) to Data-Oriented Entity Component System (ECS) using a Sweep-and-Prune collision detection algorithm."
-    />
+      content="An interactive real-time performance benchmark comparing Object-Oriented Programming (OOP) to Data-Oriented Entity Component System (ECS) using a Sweep-and-Prune collision detection algorithm." />
     <title>ECS vs. OOP Spatial Benchmark</title>
     <link rel="stylesheet" href="/src/style.css" />
   </head>
@@ -19,24 +18,34 @@
           <h1>ECS vs OOP Spatial Benchmark</h1>
         </div>
         <div class="status-badge-container">
-          Status: <span id="status-text">Ready</span>
+          Status:
+          <span id="status-text">Ready</span>
         </div>
       </header>
 
       <section class="section-intro">
         <p>
-          Can Javascript actually realize the hardware cache locality gains of Data-Oriented Entity Component Systems (ECS)? Or do heap allocations and V8 pointer indirections erode these benefits? And is WebAssembly (WASM) required to break through these performance ceilings?
+          Can Javascript actually realize the hardware cache locality gains of
+          Data-Oriented Entity Component Systems (ECS)? Or do heap allocations
+          and V8 pointer indirections erode these benefits? And is WebAssembly
+          (WASM) required to break through these performance ceilings?
         </p>
         <br />
         <p>
-          Explore this real-time benchmark suite comparing spatial trees against flat Sweep &amp; Prune algorithms across Javascript and WebAssembly.
+          Explore this real-time benchmark suite comparing spatial trees against
+          flat Sweep &amp; Prune algorithms across Javascript and WebAssembly.
         </p>
       </section>
 
-      <section class="section-hypothesis-presets" aria-label="Research Focus Presets">
+      <section
+        class="section-hypothesis-presets"
+        aria-label="Research Focus Presets">
         <div class="preset-header-row">
           <span class="preset-title">Research Focus:</span>
-          <div class="preset-buttons" id="preset-buttons-container" role="tablist">
+          <div
+            class="preset-buttons"
+            id="preset-buttons-container"
+            role="tablist">
             <!-- Dynamic preset buttons injected safely via JS -->
           </div>
           <span class="toggle-shortcuts">
@@ -44,7 +53,10 @@
             <button id="btn-select-none" class="shortcut-link">[none]</button>
           </span>
         </div>
-        <p class="preset-description" id="preset-desc-text">Hypothesis 1: Is an O(N log N) spatial tree always faster than O(N²) Sweep &amp; Prune?</p>
+        <p class="preset-description" id="preset-desc-text">
+          Hypothesis 1: Is an O(N log N) spatial tree always faster than O(N²)
+          Sweep &amp; Prune?
+        </p>
       </section>
 
       <!-- 1. Controls Section -->
@@ -61,46 +73,45 @@
           </div>
 
           <div class="control-group">
-            <label for="entity-count-slider"
-              >Entity Count: <span id="entity-count-val">5000</span></label
-            >
+            <label for="entity-count-slider">
+              Entity Count:
+              <span id="entity-count-val">5000</span>
+            </label>
             <input
               type="range"
               id="entity-count-slider"
               min="100"
               max="15000"
               step="100"
-              value="5000"
-            />
+              value="5000" />
           </div>
 
           <div class="control-group">
-            <label for="speed-slider"
-              >Entity Speed: <span id="speed-val">1.0x</span></label
-            >
+            <label for="speed-slider">
+              Entity Speed:
+              <span id="speed-val">1.0x</span>
+            </label>
             <input
               type="range"
               id="speed-slider"
               min="0.1"
               max="5.0"
               step="0.1"
-              value="1.0"
-            />
+              value="1.0" />
           </div>
 
           <div class="control-group">
-            <label for="benchmark-frames-slider"
-              >Benchmark Length:
-              <span id="benchmark-frames-val">1000 frames</span></label
-            >
+            <label for="benchmark-frames-slider">
+              Benchmark Length:
+              <span id="benchmark-frames-val">1000 frames</span>
+            </label>
             <input
               type="range"
               id="benchmark-frames-slider"
               min="100"
               max="3000"
               step="100"
-              value="1000"
-            />
+              value="1000" />
           </div>
         </div>
 
@@ -115,9 +126,9 @@
             <button id="btn-reset" class="btn btn-tertiary">Reset</button>
           </div>
           <p class="control-desc" id="coherence-desc">
-            <strong>Wandering</strong> keeps particles moving smoothly.
-            Frame-to-frame positions are almost identical, enabling optimal
-            linear-time sorting.
+            <strong>Wandering</strong>
+            keeps particles moving smoothly. Frame-to-frame positions are almost
+            identical, enabling optimal linear-time sorting.
           </p>
         </div>
       </section>
@@ -126,7 +137,6 @@
       <section class="section-displays">
         <h2>Performance Displays</h2>
         <div class="metrics-grid">
-
           <!-- Speedup Comparison Card -->
           <div class="metric-card speedup-card">
             <div class="speedup-header">
@@ -139,8 +149,7 @@
               <button
                 id="btn-copy-results"
                 class="btn-copy"
-                title="Copy Results to Clipboard"
-              >
+                title="Copy Results to Clipboard">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"
@@ -149,12 +158,10 @@
                   stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round"
-                  class="copy-icon"
-                >
+                  class="copy-icon">
                   <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                   <path
-                    d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
-                  ></path>
+                    d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                 </svg>
               </button>
             </div>
@@ -171,20 +178,24 @@
           <div class="chart-title-group">
             <h2>Execution Time Trend</h2>
             <label class="toggle-label scale-toggle">
-              <input type="checkbox" id="toggle-log-scale" checked /> Log Scale
+              <input type="checkbox" id="toggle-log-scale" checked />
+              Log Scale
             </label>
             <label class="toggle-label scale-toggle">
-              <input type="checkbox" id="toggle-zero-baseline" /> Zero Baseline
+              <input type="checkbox" id="toggle-zero-baseline" />
+              Zero Baseline
             </label>
           </div>
           <div class="chart-legend-container">
             <div class="chart-legend">
               <!-- Dynamic legend items will be injected here -->
             </div>
-            <span class="chart-frame-counter"
-              >Frame: <span id="chart-frame-index">0</span> /
-              <span id="chart-frame-total">1000</span></span
-            >
+            <span class="chart-frame-counter">
+              Frame:
+              <span id="chart-frame-index">0</span>
+              /
+              <span id="chart-frame-total">1000</span>
+            </span>
           </div>
         </div>
         <div class="svg-container" id="svg-chart-container">
@@ -204,10 +215,16 @@
           <!-- Dynamic visualizer canvases will be injected here -->
         </div>
         <script>
-          if (window.location.hash.includes('vis=expanded') || window.location.search.includes('vis=true')) {
+          if (
+            window.location.hash.includes('vis=expanded') ||
+            window.location.search.includes('vis=true')
+          ) {
             var g = document.getElementById('visualizer-grid');
             var b = document.getElementById('btn-toggle-visualizer');
-            if (g) { g.classList.remove('hidden'); g.style.minHeight = '2750px'; }
+            if (g) {
+              g.classList.remove('hidden');
+              g.style.minHeight = '2750px';
+            }
             if (b) b.textContent = 'Hide Visualizations';
           }
         </script>

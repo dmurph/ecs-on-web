@@ -2,8 +2,6 @@ import { ENTITY_COLORS, ENTITY_MAX_SPEED, SortMethod } from '../config';
 import type { SeededPRNG } from '../prng';
 import type { Simulator, EntityState, RenderEntity } from '../simulator';
 
-
-
 export interface ECSData {
   posX: Float64Array;
   posYwh: Float64Array; // Packed [posY, w, h] for each entity
@@ -12,10 +10,15 @@ export interface ECSData {
   vx: Float64Array;
   vy: Float64Array;
   indices: Int32Array;
-  id: Int32Array; // Original entity ID mapped to each index
+  // Dense array mapping component slot index -> Entity ID (models real-world Archetype/Sparse-Set ECS tables where dense component slot index != Entity ID)
+  id: Int32Array;
 }
 
-export function createECSData(numEntities: number, canvasWidth: number, canvasHeight: number): ECSData {
+export function createECSData(
+  numEntities: number,
+  canvasWidth: number,
+  canvasHeight: number,
+): ECSData {
   // posX is isolated to optimize cache line utilization during Sweep-and-Prune sorting
   const posX = new Float64Array(numEntities);
   // posYwh is packed [y, w, h] to load components together during Y-overlap checks
@@ -44,7 +47,6 @@ export function createECSData(numEntities: number, canvasWidth: number, canvasHe
   return { posX, posYwh, colorId, angle, vx, vy, indices, id };
 }
 
-
 /**
  * Step 1: Update movements
  * Updates entity positions and handles boundary collisions.
@@ -57,7 +59,7 @@ export function updateMovement(
   canvasHeight: number,
   speedMultiplier: number,
   behavior: string,
-  prng: SeededPRNG
+  prng: SeededPRNG,
 ) {
   const { posX, posYwh, vx, vy, angle } = ecsData;
   const len = posX.length;
@@ -123,7 +125,7 @@ export function runBroadphase(
   outPairs: Int32Array,
   ids: Int32Array,
   sortMethod: SortMethod = SortMethod.Insertion,
-  tempIndices?: Int32Array
+  tempIndices?: Int32Array,
 ): number {
   let pairCount = 0;
   const len = indices.length;
@@ -147,7 +149,7 @@ export function runBroadphase(
     const aRight = ax + posYwh[aIdx * 3 + 1]; // posYwh[aIdx * 3 + 1] is width (w)
     for (let j = i + 1; j < len; j++) {
       const bIdx = indices[j];
-      const bx = posX[bIdx]; 
+      const bx = posX[bIdx];
       if (bx > aRight) break; // Prune: subsequent X coordinates cannot overlap
 
       // Y-axis overlap check (AABB overlap) - reads packed posY, h
@@ -176,7 +178,7 @@ export function resolveCollisions(
   ecs: ECSData,
   pairs: Int32Array,
   pairCount: number,
-  isColliding: Uint8Array
+  isColliding: Uint8Array,
 ): number {
   let collisionCount = 0;
   const { posX, posYwh, vx, vy, angle } = ecs;
@@ -213,7 +215,7 @@ export function resolveCollisions(
       const rvx = vx[idB] - vx[idA];
       const rvy = vy[idB] - vy[idA];
       const velAlongNormal = rvx * nx + rvy * ny;
- 
+
       if (velAlongNormal < 0) {
         const impulse = -(2 * velAlongNormal) / (1 / massA + 1 / massB);
         vx[idA] -= (impulse / massA) * nx;
@@ -240,15 +242,14 @@ export function resolveCollisions(
   return collisionCount;
 }
 
-
 /**
  * Simulator representing a custom lightweight Entity Component System (ECS).
- * 
+ *
  * Data Layout: Struct of Arrays (SoA).
  * Component data is stored in flat TypedArrays (`posX`, `posYwh`, `vx`, `vy`, `angle`, `colorId`).
  * Accessing components is done by index (entity ID), ensuring contiguous memory
  * reads during systems execution, maximizing CPU cache line usage (L1/L2 hits).
- * 
+ *
  * Algorithm: Sweep-and-Prune (S&P) using 1D Insertion Sort of entity index array,
  * checking bounds by indexing directly into component arrays.
  */
@@ -263,9 +264,7 @@ export class CustomECSSimulator implements Simulator {
   private maxCollisions = 200000;
   private renderEntities: RenderEntity[] = [];
 
-  constructor(
-    sortMethod: SortMethod = SortMethod.Insertion
-  ) {
+  constructor(sortMethod: SortMethod = SortMethod.Insertion) {
     this.sortMethod = sortMethod;
   }
 
@@ -288,16 +287,29 @@ export class CustomECSSimulator implements Simulator {
    * 1. Movement updates (updatingposX, posYwh TypedArrays sequentially).
    * 2. Sweep-and-Prune broadphase (sorting indices array using posX elements, and sweeping bounds).
    * 3. Narrowphase resolution (indexing components using colliding pairs to calculate bounces).
-   * 
+   *
    * This measures the benefits of SoA cache alignment: sequential reads/writes are L1 cache friendly,
    * even though indices mapping causes slight indirection during the sweep.
    */
-  update(width: number, height: number, speedMultiplier: number, behavior: string, prng: SeededPRNG): { time: number, collisionCount: number } {
+  update(
+    width: number,
+    height: number,
+    speedMultiplier: number,
+    behavior: string,
+    prng: SeededPRNG,
+  ): { time: number; collisionCount: number } {
     const start = performance.now();
     let collisionCount = 0;
     if (this.ecsData) {
       // Step 1: Update movements
-      updateMovement(this.ecsData, width, height, speedMultiplier, behavior, prng);
+      updateMovement(
+        this.ecsData,
+        width,
+        height,
+        speedMultiplier,
+        behavior,
+        prng,
+      );
       // Step 2: Broadphase
       const pairsCount = runBroadphase(
         this.ecsData.indices,
@@ -306,12 +318,17 @@ export class CustomECSSimulator implements Simulator {
         this.pairsBuffer,
         this.ecsData.id,
         this.sortMethod,
-        this.tempIndices
+        this.tempIndices,
       );
-      
+
       this.colliding.fill(0);
       // Step 3: Narrowphase
-      collisionCount = resolveCollisions(this.ecsData, this.pairsBuffer, pairsCount, this.colliding);
+      collisionCount = resolveCollisions(
+        this.ecsData,
+        this.pairsBuffer,
+        pairsCount,
+        this.colliding,
+      );
     }
     const end = performance.now();
     const time = end - start;
@@ -334,8 +351,12 @@ export class CustomECSSimulator implements Simulator {
     return this.renderEntities;
   }
 
-  getTimes() { return this.times; }
-  clearTimes() { this.times = []; }
+  getTimes() {
+    return this.times;
+  }
+  clearTimes() {
+    this.times = [];
+  }
 
   /**
    * Translates flat TypedArray component buffers into structured EntityState array
@@ -355,7 +376,7 @@ export class CustomECSSimulator implements Simulator {
         vx: vx[i],
         vy: vy[i],
         angle: angle[i],
-        color: ENTITY_COLORS[colorId[i]]
+        color: ENTITY_COLORS[colorId[i]],
       };
     }
     return result;
@@ -385,11 +406,16 @@ export class CustomECSSimulator implements Simulator {
 export {
   updateMovement as updateECSMovement,
   runBroadphase as runECSBroadphase,
-  resolveCollisions as resolveECSPhysics
+  resolveCollisions as resolveECSPhysics,
 };
 
 // === INTERNAL SORTING ALGORITHMS ===
-function insertionSortRangeECS(indices: Int32Array, posX: Float64Array | Float32Array, left: number, right: number) {
+function insertionSortRangeECS(
+  indices: Int32Array,
+  posX: Float64Array | Float32Array,
+  left: number,
+  right: number,
+) {
   for (let i = left + 1; i <= right; i++) {
     const currIdx = indices[i];
     const currX = posX[currIdx];
@@ -406,7 +432,12 @@ function insertionSortCustomECS(indices: Int32Array, posX: Float64Array) {
   insertionSortRangeECS(indices, posX, 0, indices.length - 1);
 }
 
-function quickSortCustomECS(indices: Int32Array, posX: Float64Array, left: number, right: number) {
+function quickSortCustomECS(
+  indices: Int32Array,
+  posX: Float64Array,
+  left: number,
+  right: number,
+) {
   if (right - left < 12) {
     insertionSortRangeECS(indices, posX, left, right);
     return;
@@ -416,7 +447,12 @@ function quickSortCustomECS(indices: Int32Array, posX: Float64Array, left: numbe
   quickSortCustomECS(indices, posX, pivotIdx + 1, right);
 }
 
-function partitionCustomECS(indices: Int32Array, posX: Float64Array, left: number, right: number): number {
+function partitionCustomECS(
+  indices: Int32Array,
+  posX: Float64Array,
+  left: number,
+  right: number,
+): number {
   const mid = (left + right) >> 1;
   const tempMid = indices[mid];
   indices[mid] = indices[right];
@@ -438,12 +474,24 @@ function partitionCustomECS(indices: Int32Array, posX: Float64Array, left: numbe
   return i + 1;
 }
 
-function mergeSortCustomECS(indices: Int32Array, posX: Float64Array, temp: Int32Array, left: number, right: number) {
+function mergeSortCustomECS(
+  indices: Int32Array,
+  posX: Float64Array,
+  temp: Int32Array,
+  left: number,
+  right: number,
+) {
   temp.set(indices);
   mergeSortCustomECSRec(temp, indices, posX, left, right);
 }
 
-function mergeSortCustomECSRec(src: Int32Array, dst: Int32Array, posX: Float64Array, left: number, right: number) {
+function mergeSortCustomECSRec(
+  src: Int32Array,
+  dst: Int32Array,
+  posX: Float64Array,
+  left: number,
+  right: number,
+) {
   if (right - left < 12) {
     insertionSortRangeECS(dst, posX, left, right);
     for (let m = left; m <= right; m++) {
@@ -454,7 +502,7 @@ function mergeSortCustomECSRec(src: Int32Array, dst: Int32Array, posX: Float64Ar
   const mid = (left + right) >> 1;
   mergeSortCustomECSRec(dst, src, posX, left, mid);
   mergeSortCustomECSRec(dst, src, posX, mid + 1, right);
-  
+
   let i = left;
   let j = mid + 1;
   let k = left;
@@ -474,4 +522,3 @@ function mergeSortCustomECSRec(src: Int32Array, dst: Int32Array, posX: Float64Ar
     dst[k++] = src[j++];
   }
 }
-

@@ -3,7 +3,7 @@ export const ENTITY_COLORS = [
   '#0d9488', // Teal (Darker)
   '#7c3aed', // Purple (Darker)
   '#e11d48', // Rose (Darker)
-  '#d97706'  // Amber (Darker)
+  '#d97706', // Amber (Darker)
 ];
 
 export const ENTITY_MAX_SPEED = 3.5;
@@ -12,11 +12,10 @@ export const SortMethod = {
   Insertion: 'insertion',
   Quick: 'quick',
   Merge: 'merge',
-  Native: 'native'
+  Native: 'native',
 } as const;
 
-export type SortMethod = typeof SortMethod[keyof typeof SortMethod];
+export type SortMethod = (typeof SortMethod)[keyof typeof SortMethod];
 
 export const TREE_REBALANCE_FRAME_INTERVAL = 16;
 export const TREE_REBALANCE_PERCENTAGE = 0.001; // 0.1%
-

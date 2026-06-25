@@ -1,29 +1,34 @@
-import { ENTITY_COLORS, ENTITY_MAX_SPEED, TREE_REBALANCE_FRAME_INTERVAL, TREE_REBALANCE_PERCENTAGE } from '../config';
+import {
+  ENTITY_COLORS,
+  ENTITY_MAX_SPEED,
+  TREE_REBALANCE_FRAME_INTERVAL,
+  TREE_REBALANCE_PERCENTAGE,
+} from '../config';
 import { SeededPRNG } from '../prng';
 import type { Simulator, EntityState, RenderEntity } from '../simulator';
 import type { ECSData } from './benchmark_custom_ecs';
 
 /**
  * A highly optimized, flat pre-allocated AABB Tree using TypedArrays (SoA layout).
- * 
+ *
  * Instead of allocating TreeNode objects on the heap, all nodes are referenced
  * by integer indices in contiguous arrays.
  */
 export class FlatAABBTree {
   maxNodes: number;
-  
+
   // Node bounds
   minX: Float64Array;
   minY: Float64Array;
   maxX: Float64Array;
   maxY: Float64Array;
-  
+
   // Node structure pointers (indices)
   parent: Int32Array;
   left: Int32Array;
   right: Int32Array;
   height: Int32Array;
-  
+
   // Link leaf node to entity ID. For internal nodes, this is -1.
   entity: Int32Array;
 
@@ -33,12 +38,12 @@ export class FlatAABBTree {
   constructor(maxEntities: number) {
     // A binary tree with N leaves has 2N - 1 nodes.
     this.maxNodes = maxEntities * 2 + 10; // Add padding to be safe
-    
+
     this.minX = new Float64Array(this.maxNodes);
     this.minY = new Float64Array(this.maxNodes);
     this.maxX = new Float64Array(this.maxNodes);
     this.maxY = new Float64Array(this.maxNodes);
-    
+
     this.parent = new Int32Array(this.maxNodes).fill(-1);
     this.left = new Int32Array(this.maxNodes).fill(-1);
     this.right = new Int32Array(this.maxNodes).fill(-1);
@@ -57,7 +62,7 @@ export class FlatAABBTree {
    */
   allocateNode(x0: number, y0: number, x1: number, y1: number): number {
     if (this.freeHead === -1) {
-      throw new Error("FlatAABBTree: Out of free nodes!");
+      throw new Error('FlatAABBTree: Out of free nodes!');
     }
     const idx = this.freeHead;
     this.freeHead = this.left[idx]; // Pop from free list
@@ -104,7 +109,8 @@ export class FlatAABBTree {
     const leafMaxY = this.maxY[leaf];
 
     let index = this.root;
-    while (this.left[index] !== -1) { // While not a leaf
+    while (this.left[index] !== -1) {
+      // While not a leaf
       const l = this.left[index];
       const r = this.right[index];
 
@@ -136,11 +142,12 @@ export class FlatAABBTree {
       const lcx1 = Math.max(this.maxX[l], leafMaxX);
       const lcy1 = Math.max(this.maxY[l], leafMaxY);
       const lCombinedArea = (lcx1 - lcx0) * (lcy1 - lcy0);
-      
-      if (this.left[l] === -1) { // Left is leaf
+
+      if (this.left[l] === -1) {
+        // Left is leaf
         costLeft = lCombinedArea + inheritanceCost;
       } else {
-        costLeft = (lCombinedArea - lArea) + inheritanceCost;
+        costLeft = lCombinedArea - lArea + inheritanceCost;
       }
 
       // Cost of descending right
@@ -154,10 +161,11 @@ export class FlatAABBTree {
       const rcy1 = Math.max(this.maxY[r], leafMaxY);
       const rCombinedArea = (rcx1 - rcx0) * (rcy1 - rcy0);
 
-      if (this.left[r] === -1) { // Right is leaf
+      if (this.left[r] === -1) {
+        // Right is leaf
         costRight = rCombinedArea + inheritanceCost;
       } else {
-        costRight = (rCombinedArea - rArea) + inheritanceCost;
+        costRight = rCombinedArea - rArea + inheritanceCost;
       }
 
       // Descend according to the minimum cost
@@ -180,7 +188,7 @@ export class FlatAABBTree {
       Math.min(this.minX[sibling], leafMinX),
       Math.min(this.minY[sibling], leafMinY),
       Math.max(this.maxX[sibling], leafMaxX),
-      Math.max(this.maxY[sibling], leafMaxY)
+      Math.max(this.maxY[sibling], leafMaxY),
     );
     this.parent[newParent] = oldParent;
     this.height[newParent] = this.height[sibling] + 1;
@@ -209,7 +217,9 @@ export class FlatAABBTree {
     while (node !== -1) {
       node = balanceFlat(this, node);
       refitAABB(this, node);
-      this.height[node] = 1 + Math.max(this.height[this.left[node]], this.height[this.right[node]]);
+      this.height[node] =
+        1 +
+        Math.max(this.height[this.left[node]], this.height[this.right[node]]);
       node = this.parent[node];
     }
   }
@@ -225,7 +235,8 @@ export class FlatAABBTree {
 
     const parent = this.parent[leaf];
     const grandparent = this.parent[parent];
-    const sibling = (this.left[parent] === leaf) ? this.right[parent] : this.left[parent];
+    const sibling =
+      this.left[parent] === leaf ? this.right[parent] : this.left[parent];
 
     if (grandparent !== -1) {
       if (this.left[grandparent] === parent) {
@@ -241,7 +252,9 @@ export class FlatAABBTree {
       while (node !== -1) {
         node = balanceFlat(this, node);
         refitAABB(this, node);
-        this.height[node] = 1 + Math.max(this.height[this.left[node]], this.height[this.right[node]]);
+        this.height[node] =
+          1 +
+          Math.max(this.height[this.left[node]], this.height[this.right[node]]);
         node = this.parent[node];
       }
     } else {
@@ -303,12 +316,15 @@ function balanceFlat(tree: FlatAABBTree, i: number): number {
       tree.right[right] = rightLeft;
       tree.right[i] = rightRight;
       tree.parent[rightRight] = i;
-      
+
       refitAABB(tree, i);
       refitAABB(tree, right);
 
-      tree.height[i] = 1 + Math.max(tree.height[tree.left[i]], tree.height[tree.right[i]]);
-      tree.height[right] = 1 + Math.max(tree.height[tree.left[right]], tree.height[tree.right[right]]);
+      tree.height[i] =
+        1 + Math.max(tree.height[tree.left[i]], tree.height[tree.right[i]]);
+      tree.height[right] =
+        1 +
+        Math.max(tree.height[tree.left[right]], tree.height[tree.right[right]]);
     } else {
       tree.right[right] = rightRight;
       tree.right[i] = rightLeft;
@@ -317,8 +333,11 @@ function balanceFlat(tree: FlatAABBTree, i: number): number {
       refitAABB(tree, i);
       refitAABB(tree, right);
 
-      tree.height[i] = 1 + Math.max(tree.height[tree.left[i]], tree.height[tree.right[i]]);
-      tree.height[right] = 1 + Math.max(tree.height[tree.left[right]], tree.height[tree.right[right]]);
+      tree.height[i] =
+        1 + Math.max(tree.height[tree.left[i]], tree.height[tree.right[i]]);
+      tree.height[right] =
+        1 +
+        Math.max(tree.height[tree.left[right]], tree.height[tree.right[right]]);
     }
 
     return right;
@@ -350,12 +369,15 @@ function balanceFlat(tree: FlatAABBTree, i: number): number {
       tree.left[left] = leftLeft;
       tree.left[i] = leftRight;
       tree.parent[leftRight] = i;
-      
+
       refitAABB(tree, i);
       refitAABB(tree, left);
 
-      tree.height[i] = 1 + Math.max(tree.height[tree.left[i]], tree.height[tree.right[i]]);
-      tree.height[left] = 1 + Math.max(tree.height[tree.left[left]], tree.height[tree.right[left]]);
+      tree.height[i] =
+        1 + Math.max(tree.height[tree.left[i]], tree.height[tree.right[i]]);
+      tree.height[left] =
+        1 +
+        Math.max(tree.height[tree.left[left]], tree.height[tree.right[left]]);
     } else {
       tree.left[left] = leftRight;
       tree.left[i] = leftLeft;
@@ -364,8 +386,11 @@ function balanceFlat(tree: FlatAABBTree, i: number): number {
       refitAABB(tree, i);
       refitAABB(tree, left);
 
-      tree.height[i] = 1 + Math.max(tree.height[tree.left[i]], tree.height[tree.right[i]]);
-      tree.height[left] = 1 + Math.max(tree.height[tree.left[left]], tree.height[tree.right[left]]);
+      tree.height[i] =
+        1 + Math.max(tree.height[tree.left[i]], tree.height[tree.right[i]]);
+      tree.height[left] =
+        1 +
+        Math.max(tree.height[tree.left[left]], tree.height[tree.right[left]]);
     }
 
     return left;
@@ -386,7 +411,7 @@ function queryOverlapFlatIter(
   tree: FlatAABBTree,
   startNodeA: number,
   startNodeB: number,
-  callback: (leafA: number, leafB: number) => void
+  callback: (leafA: number, leafB: number) => void,
 ) {
   let stackPtr = 0;
   stackA[0] = startNodeA;
@@ -406,8 +431,11 @@ function queryOverlapFlatIter(
     const nodeA = stackA[stackPtr];
     const nodeB = stackB[stackPtr];
 
-    const overlap = minX[nodeA] <= maxX[nodeB] && maxX[nodeA] >= minX[nodeB] &&
-                    minY[nodeA] <= maxY[nodeB] && maxY[nodeA] >= minY[nodeB];
+    const overlap =
+      minX[nodeA] <= maxX[nodeB] &&
+      maxX[nodeA] >= minX[nodeB] &&
+      minY[nodeA] <= maxY[nodeB] &&
+      maxY[nodeA] >= minY[nodeB];
     if (!overlap) continue;
 
     const isLeafA = left[nodeA] === -1;
@@ -417,7 +445,7 @@ function queryOverlapFlatIter(
       callback(nodeA, nodeB);
     } else if (isLeafA) {
       if (stackPtr + 2 > stackA.length) {
-         throw new Error("FlatAABBTree: Stack overflow in queryOverlap");
+        throw new Error('FlatAABBTree: Stack overflow in queryOverlap');
       }
       stackA[stackPtr] = nodeA;
       stackB[stackPtr] = left[nodeB];
@@ -426,7 +454,7 @@ function queryOverlapFlatIter(
       stackPtr += 2;
     } else if (isLeafB) {
       if (stackPtr + 2 > stackA.length) {
-         throw new Error("FlatAABBTree: Stack overflow in queryOverlap");
+        throw new Error('FlatAABBTree: Stack overflow in queryOverlap');
       }
       stackA[stackPtr] = left[nodeA];
       stackB[stackPtr] = nodeB;
@@ -435,7 +463,7 @@ function queryOverlapFlatIter(
       stackPtr += 2;
     } else {
       if (stackPtr + 2 > stackA.length) {
-         throw new Error("FlatAABBTree: Stack overflow in queryOverlap");
+        throw new Error('FlatAABBTree: Stack overflow in queryOverlap');
       }
       if (height[nodeA] > height[nodeB]) {
         stackA[stackPtr] = left[nodeA];
@@ -452,7 +480,6 @@ function queryOverlapFlatIter(
     }
   }
 }
-
 
 /**
  * Step 1: Update movements
@@ -477,7 +504,7 @@ export function updateMovement(
   behavior: string,
   prng: SeededPRNG,
   outMoveBuffer: Int32Array,
-  outMoveCount: { count: number }
+  outMoveCount: { count: number },
 ) {
   const len = posX.length;
   outMoveCount.count = 0;
@@ -525,8 +552,10 @@ export function updateMovement(
       const leaf = entityLeaf[i];
       if (leaf !== -1) {
         if (
-          posX[i] < treeMinX[leaf] || posX[i] + w > treeMaxX[leaf] ||
-          posYwh[i * 3 + 0] < treeMinY[leaf] || posYwh[i * 3 + 0] + h > treeMaxY[leaf]
+          posX[i] < treeMinX[leaf] ||
+          posX[i] + w > treeMaxX[leaf] ||
+          posYwh[i * 3 + 0] < treeMinY[leaf] ||
+          posYwh[i * 3 + 0] + h > treeMaxY[leaf]
         ) {
           outMoveBuffer[outMoveCount.count++] = i; // Push entity index to update
         }
@@ -536,7 +565,7 @@ export function updateMovement(
     for (let i = 0; i < len; i++) {
       const w = posYwh[i * 3 + 1];
       const h = posYwh[i * 3 + 2];
-      
+
       posX[i] = prng.next() * (canvasWidth - w);
       posYwh[i * 3 + 0] = prng.next() * (canvasHeight - h);
 
@@ -544,8 +573,10 @@ export function updateMovement(
       const leaf = entityLeaf[i];
       if (leaf !== -1) {
         if (
-          posX[i] < treeMinX[leaf] || posX[i] + w > treeMaxX[leaf] ||
-          posYwh[i * 3 + 0] < treeMinY[leaf] || posYwh[i * 3 + 0] + h > treeMaxY[leaf]
+          posX[i] < treeMinX[leaf] ||
+          posX[i] + w > treeMaxX[leaf] ||
+          posYwh[i * 3 + 0] < treeMinY[leaf] ||
+          posYwh[i * 3 + 0] + h > treeMaxY[leaf]
         ) {
           outMoveBuffer[outMoveCount.count++] = i;
         }
@@ -563,7 +594,7 @@ export function runBroadphase(
   tree: FlatAABBTree,
   posX: Float64Array,
   posYwh: Float64Array,
-  outPairsBuffer: Int32Array
+  outPairsBuffer: Int32Array,
 ): number {
   let pairCount = 0;
   if (tree.root === -1 || tree.left[tree.root] === -1) return 0;
@@ -607,12 +638,14 @@ export function runBroadphase(
     const rightChild = right[node];
 
     if (left[leftChild] !== -1) {
-      if (stackPtr + 1 > mainStack.length) throw new Error("FlatAABBTree: Main stack overflow");
+      if (stackPtr + 1 > mainStack.length)
+        throw new Error('FlatAABBTree: Main stack overflow');
       mainStack[stackPtr] = leftChild;
       stackPtr++;
     }
     if (left[rightChild] !== -1) {
-      if (stackPtr + 1 > mainStack.length) throw new Error("FlatAABBTree: Main stack overflow");
+      if (stackPtr + 1 > mainStack.length)
+        throw new Error('FlatAABBTree: Main stack overflow');
       mainStack[stackPtr] = rightChild;
       stackPtr++;
     }
@@ -620,7 +653,6 @@ export function runBroadphase(
 
   return pairCount;
 }
-
 
 /**
  * Step 2a: Update tree (Broadphase)
@@ -635,7 +667,7 @@ export function updateTree(
   moveBuffer: Int32Array,
   moveCount: number,
   movedFrameCount: number,
-  prng?: SeededPRNG
+  prng?: SeededPRNG,
 ) {
   const margin = 2.0; // Fat bounds margin
 
@@ -659,9 +691,14 @@ export function updateTree(
   // Optimize tree globally according to configuration intervals
   if (moveCount > 0 && movedFrameCount % TREE_REBALANCE_FRAME_INTERVAL === 0) {
     const len = posX.length;
-    const numToOptimize = Math.max(1, Math.floor(len * TREE_REBALANCE_PERCENTAGE));
+    const numToOptimize = Math.max(
+      1,
+      Math.floor(len * TREE_REBALANCE_PERCENTAGE),
+    );
     for (let k = 0; k < numToOptimize; k++) {
-      const entityId = prng ? Math.floor(prng.next() * len) : Math.floor(Math.random() * len);
+      const entityId = prng
+        ? Math.floor(prng.next() * len)
+        : Math.floor(Math.random() * len);
       const leaf = entityLeaf[entityId];
       if (leaf !== -1) {
         tree.removeLeaf(leaf);
@@ -684,7 +721,7 @@ export function resolveCollisions(
   angle: Float64Array,
   pairsBuffer: Int32Array,
   pairsCount: number,
-  isColliding: Uint8Array
+  isColliding: Uint8Array,
 ): number {
   let collisionCount = 0;
 
@@ -758,11 +795,10 @@ export function resolveCollisions(
  * Simulator representing a Custom flat ECS engine using a pre-allocated flat AABB Tree for broadphase.
  */
 export class ECSTreeSimulator implements Simulator {
-
   private ecsData: ECSData | null = null;
   private entityLeaf: Int32Array = new Int32Array(0); // maps entity id to tree leaf node idx
   private tree: FlatAABBTree | null = null;
-  
+
   // Buffers
   private moveBuffer: Int32Array = new Int32Array(0);
   private moveCount = { count: 0 };
@@ -774,7 +810,12 @@ export class ECSTreeSimulator implements Simulator {
   private movedFrameCount = 0;
   private renderEntities: RenderEntity[] = [];
 
-  init(numEntities: number, _width: number, _height: number, _prng: SeededPRNG) {
+  init(
+    numEntities: number,
+    _width: number,
+    _height: number,
+    _prng: SeededPRNG,
+  ) {
     // 1. Spawns standard SoA component arrays
     const posX = new Float64Array(numEntities);
     const posYwh = new Float64Array(numEntities * 3);
@@ -794,7 +835,7 @@ export class ECSTreeSimulator implements Simulator {
     }
 
     this.ecsData = { posX, posYwh, vx, vy, angle, colorId, indices, id };
-    
+
     // 2. Allocate Leaf mapping and flat tree nodes
     this.entityLeaf = new Int32Array(numEntities).fill(-1);
     this.tree = new FlatAABBTree(numEntities);
@@ -809,7 +850,7 @@ export class ECSTreeSimulator implements Simulator {
         posX[i] - margin,
         posYwh[i * 3 + 0] - margin,
         posX[i] + posYwh[i * 3 + 1] + margin,
-        posYwh[i * 3 + 0] + posYwh[i * 3 + 2] + margin
+        posYwh[i * 3 + 0] + posYwh[i * 3 + 2] + margin,
       );
       this.tree.entity[leafIdx] = i;
       this.entityLeaf[i] = leafIdx;
@@ -826,7 +867,13 @@ export class ECSTreeSimulator implements Simulator {
     this.movedFrameCount = 0;
   }
 
-  update(width: number, height: number, speedMultiplier: number, behavior: string, prng: SeededPRNG): { time: number, collisionCount: number } {
+  update(
+    width: number,
+    height: number,
+    speedMultiplier: number,
+    behavior: string,
+    prng: SeededPRNG,
+  ): { time: number; collisionCount: number } {
     const start = performance.now();
     let collisionCount = 0;
 
@@ -849,7 +896,7 @@ export class ECSTreeSimulator implements Simulator {
         behavior,
         prng,
         this.moveBuffer,
-        this.moveCount
+        this.moveCount,
       );
 
       if (this.moveCount.count > 0) {
@@ -865,7 +912,7 @@ export class ECSTreeSimulator implements Simulator {
         this.moveBuffer,
         this.moveCount.count,
         this.movedFrameCount,
-        prng
+        prng,
       );
 
       // Step 2b: Broadphase (Flat Tree query)
@@ -873,7 +920,7 @@ export class ECSTreeSimulator implements Simulator {
         this.tree,
         this.ecsData.posX,
         this.ecsData.posYwh,
-        this.pairsBuffer
+        this.pairsBuffer,
       );
 
       // Step 3: Narrowphase (ECS resolution)
@@ -886,7 +933,7 @@ export class ECSTreeSimulator implements Simulator {
         this.ecsData.angle,
         this.pairsBuffer,
         pairsCount,
-        this.colliding
+        this.colliding,
       );
     }
 
@@ -912,8 +959,12 @@ export class ECSTreeSimulator implements Simulator {
     return this.renderEntities;
   }
 
-  getTimes() { return this.times; }
-  clearTimes() { this.times = []; }
+  getTimes() {
+    return this.times;
+  }
+  clearTimes() {
+    this.times = [];
+  }
 
   getPositions(): EntityState[] {
     if (!this.ecsData) return [];
@@ -929,7 +980,7 @@ export class ECSTreeSimulator implements Simulator {
         vx: vx[i],
         vy: vy[i],
         angle: angle[i],
-        color: ENTITY_COLORS[colorId[i]]
+        color: ENTITY_COLORS[colorId[i]],
       };
     }
     return result;
@@ -959,7 +1010,7 @@ export class ECSTreeSimulator implements Simulator {
         p.x - margin,
         p.y - margin,
         p.x + p.w + margin,
-        p.y + p.h + margin
+        p.y + p.h + margin,
       );
       this.tree.entity[leafIdx] = i;
       this.entityLeaf[i] = leafIdx;
@@ -973,5 +1024,5 @@ export {
   updateMovement as updateECSTreeMovement,
   updateTree as updateTreeFlat,
   runBroadphase as runFlatTreeBroadphase,
-  resolveCollisions as resolveECSTreePhysics
+  resolveCollisions as resolveECSTreePhysics,
 };

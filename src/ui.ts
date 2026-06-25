@@ -8,7 +8,9 @@ export interface UICallbacks {
   onReset: () => void;
   onCopy: () => void;
   onToggleSimulator?: (id: string, active: boolean) => void;
-  onToggleMultipleSimulators?: (toggles: { id: string; active: boolean }[]) => void;
+  onToggleMultipleSimulators?: (
+    toggles: { id: string; active: boolean }[],
+  ) => void;
   onToggleLogScale?: (active: boolean) => void;
   onToggleZeroBaseline?: (active: boolean) => void;
   onBaselineChange?: (id: string) => void;
@@ -27,33 +29,44 @@ export const PRESETS: PresetConfig[] = [
   {
     id: 'h1',
     name: 'H1: Tree vs S&P',
-    description: 'Hypothesis 1: Is an O(N log N) spatial tree always faster than O(N²) Sweep & Prune?',
-    simulatorIds: ['oop', 'ecs', 'oop-tree', 'ecs-tree', 'wasm-tree']
+    description:
+      'Hypothesis 1: Is an O(N log N) spatial tree always faster than O(N²) Sweep & Prune?',
+    simulatorIds: ['oop', 'ecs', 'oop-tree', 'ecs-tree', 'wasm-tree'],
   },
   {
     id: 'h2',
     name: 'H2: Sorting Strategies',
-    description: 'Hypothesis 2: Is Insertion Sort optimal for mostly-sorted real-time physics data?',
-    simulatorIds: ['ecs', 'ecs-quick', 'ecs-merge', 'ecs-native']
+    description:
+      'Hypothesis 2: Is Insertion Sort optimal for mostly-sorted real-time physics data?',
+    simulatorIds: ['ecs', 'ecs-quick', 'ecs-merge', 'ecs-native'],
   },
   {
     id: 'h3',
     name: 'H3: JS vs WASM',
-    description: 'Hypothesis 3: Is WebAssembly required to realize the memory locality gains of ECS?',
-    simulatorIds: ['ecs-merge', 'wasm-merge', 'ecs-tree', 'wasm-tree']
+    description:
+      'Hypothesis 3: Is WebAssembly required to realize the memory locality gains of ECS?',
+    simulatorIds: ['ecs-merge', 'wasm-merge', 'ecs-tree', 'wasm-tree'],
   },
   {
     id: 'showdown',
     name: '🏆 Finale: Titan Showdown',
-    description: 'Grand Finale: Pitting the reigning S&P Merge champions head-to-head against the fastest spatial trees.',
-    simulatorIds: ['oop-tree', 'ecs-tree', 'wasm-tree', 'ecs-merge', 'wasm-merge']
+    description:
+      'Grand Finale: Pitting the reigning S&P Merge champions head-to-head against the fastest spatial trees.',
+    simulatorIds: [
+      'oop-tree',
+      'ecs-tree',
+      'wasm-tree',
+      'ecs-merge',
+      'wasm-merge',
+    ],
   },
   {
     id: 'all',
     name: 'All Simulators',
-    description: 'Sandbox Overview of all available spatial and collision detection benchmarks.',
-    simulatorIds: SIMULATOR_REGISTRY.map(s => s.id)
-  }
+    description:
+      'Sandbox Overview of all available spatial and collision detection benchmarks.',
+    simulatorIds: SIMULATOR_REGISTRY.map((s) => s.id),
+  },
 ];
 
 let currentPresetId = 'h1';
@@ -99,18 +112,21 @@ function generatePresets(onSelectPreset: (preset: PresetConfig) => void) {
   if (!container || !descEl) return;
   container.replaceChildren();
 
-  PRESETS.forEach(preset => {
+  PRESETS.forEach((preset) => {
     const btn = document.createElement('button');
     btn.className = `preset-btn ${preset.id === currentPresetId ? 'active' : ''}`;
     btn.id = `btn-preset-${preset.id}`;
     btn.setAttribute('role', 'tab');
-    btn.setAttribute('aria-selected', preset.id === currentPresetId ? 'true' : 'false');
+    btn.setAttribute(
+      'aria-selected',
+      preset.id === currentPresetId ? 'true' : 'false',
+    );
     btn.textContent = preset.name;
 
     btn.addEventListener('click', () => {
       currentPresetId = preset.id;
       descEl.textContent = preset.description;
-      container.querySelectorAll('.preset-btn').forEach(b => {
+      container.querySelectorAll('.preset-btn').forEach((b) => {
         b.classList.remove('active');
         b.setAttribute('aria-selected', 'false');
       });
@@ -126,20 +142,22 @@ function generatePresets(onSelectPreset: (preset: PresetConfig) => void) {
 function generateMetricCards(activeSimulatorIds?: string[]) {
   const container = document.querySelector('.metrics-grid')!;
   if (!container) return;
-  
+
   const cards = container.querySelectorAll('.metric-card');
-  cards.forEach(card => {
+  cards.forEach((card) => {
     if (!card.classList.contains('speedup-card')) {
       card.remove();
     }
   });
 
   const speedupCard = container.querySelector('.speedup-card')!;
-  SIMULATOR_REGISTRY.forEach(sim => {
+  SIMULATOR_REGISTRY.forEach((sim) => {
     const card = document.createElement('div');
     card.className = `metric-card ${sim.id}-card`;
     card.id = `card-metric-${sim.id}`;
-    const isActive = activeSimulatorIds ? activeSimulatorIds.includes(sim.id) : sim.activeByDefault;
+    const isActive = activeSimulatorIds
+      ? activeSimulatorIds.includes(sim.id)
+      : sim.activeByDefault;
     if (!isActive) {
       card.classList.add('hidden');
     }
@@ -176,7 +194,7 @@ function generateMetricCards(activeSimulatorIds?: string[]) {
     const items = [
       { label: 'Current', id: `${sim.id}-current-time` },
       { label: 'Average', id: `${sim.id}-avg-time` },
-      { label: '99th %', id: `${sim.id}-p99-time` }
+      { label: '99th %', id: `${sim.id}-p99-time` },
     ];
 
     items.forEach(({ label, id }) => {
@@ -205,11 +223,13 @@ function generateLegend(activeSimulatorIds?: string[]) {
   if (!container) return;
   container.replaceChildren();
 
-  SIMULATOR_REGISTRY.forEach(sim => {
+  SIMULATOR_REGISTRY.forEach((sim) => {
     const item = document.createElement('span');
     item.className = 'legend-item';
     item.id = `legend-item-${sim.id}`;
-    const isActive = activeSimulatorIds ? activeSimulatorIds.includes(sim.id) : sim.activeByDefault;
+    const isActive = activeSimulatorIds
+      ? activeSimulatorIds.includes(sim.id)
+      : sim.activeByDefault;
     if (!isActive) {
       item.classList.add('hidden');
     }
@@ -230,11 +250,13 @@ function generateCanvases(activeSimulatorIds?: string[]) {
   container.style.minHeight = '';
   container.replaceChildren();
 
-  SIMULATOR_REGISTRY.forEach(sim => {
+  SIMULATOR_REGISTRY.forEach((sim) => {
     const card = document.createElement('div');
     card.className = 'canvas-card';
     card.id = `card-canvas-${sim.id}`;
-    const isActive = activeSimulatorIds ? activeSimulatorIds.includes(sim.id) : sim.activeByDefault;
+    const isActive = activeSimulatorIds
+      ? activeSimulatorIds.includes(sim.id)
+      : sim.activeByDefault;
     if (!isActive) {
       card.classList.add('hidden');
     }
@@ -279,47 +301,73 @@ function generateCanvases(activeSimulatorIds?: string[]) {
 }
 
 export function initUI(activeSimulatorIds?: string[]) {
-  const activeIds = activeSimulatorIds ?? SIMULATOR_REGISTRY.filter(s => s.activeByDefault).map(s => s.id);
-  const match = PRESETS.find(p => p.simulatorIds.length === activeIds.length && p.simulatorIds.every(id => activeIds.includes(id)));
+  const activeIds =
+    activeSimulatorIds ??
+    SIMULATOR_REGISTRY.filter((s) => s.activeByDefault).map((s) => s.id);
+  const match = PRESETS.find(
+    (p) =>
+      p.simulatorIds.length === activeIds.length &&
+      p.simulatorIds.every((id) => activeIds.includes(id)),
+  );
   currentPresetId = match ? match.id : 'all';
 
   generateMetricCards(activeIds);
   generateLegend(activeIds);
   generateCanvases(activeIds);
 
-  toggleLogScale = document.getElementById('toggle-log-scale') as HTMLInputElement;
-  toggleZeroBaseline = document.getElementById('toggle-zero-baseline') as HTMLInputElement;
+  toggleLogScale = document.getElementById(
+    'toggle-log-scale',
+  ) as HTMLInputElement;
+  toggleZeroBaseline = document.getElementById(
+    'toggle-zero-baseline',
+  ) as HTMLInputElement;
 
   statusPulse = document.getElementById('status-pulse')!;
   statusText = document.getElementById('status-text')!;
-  entitySlider = document.getElementById('entity-count-slider') as HTMLInputElement;
+  entitySlider = document.getElementById(
+    'entity-count-slider',
+  ) as HTMLInputElement;
   entityVal = document.getElementById('entity-count-val')!;
-  behaviorSelect = document.getElementById('movement-behavior-select') as HTMLSelectElement;
+  behaviorSelect = document.getElementById(
+    'movement-behavior-select',
+  ) as HTMLSelectElement;
   coherenceDesc = document.getElementById('coherence-desc')!;
   speedSlider = document.getElementById('speed-slider') as HTMLInputElement;
   speedVal = document.getElementById('speed-val')!;
-  lengthSlider = document.getElementById('benchmark-frames-slider') as HTMLInputElement;
+  lengthSlider = document.getElementById(
+    'benchmark-frames-slider',
+  ) as HTMLInputElement;
   lengthVal = document.getElementById('benchmark-frames-val')!;
 
   btnRun = document.getElementById('btn-run-benchmark') as HTMLButtonElement;
   btnPause = document.getElementById('btn-toggle-pause') as HTMLButtonElement;
   btnReset = document.getElementById('btn-reset') as HTMLButtonElement;
 
-  btnCopyResults = document.getElementById('btn-copy-results') as HTMLButtonElement;
-  compareBaselineSelect = document.getElementById('compare-baseline-select') as HTMLSelectElement;
+  btnCopyResults = document.getElementById(
+    'btn-copy-results',
+  ) as HTMLButtonElement;
+  compareBaselineSelect = document.getElementById(
+    'compare-baseline-select',
+  ) as HTMLSelectElement;
   speedupValuesContainer = document.getElementById('speedup-values-container')!;
 
   chartFrameIndexEl = document.getElementById('chart-frame-index')!;
   chartFrameTotalEl = document.getElementById('chart-frame-total')!;
-  btnToggleVisualizer = document.getElementById('btn-toggle-visualizer') as HTMLButtonElement;
+  btnToggleVisualizer = document.getElementById(
+    'btn-toggle-visualizer',
+  ) as HTMLButtonElement;
 
-  SIMULATOR_REGISTRY.forEach(sim => {
-    toggles[sim.id] = document.getElementById(`toggle-${sim.id}`) as HTMLInputElement;
+  SIMULATOR_REGISTRY.forEach((sim) => {
+    toggles[sim.id] = document.getElementById(
+      `toggle-${sim.id}`,
+    ) as HTMLInputElement;
     currentTimeEls[sim.id] = document.getElementById(`${sim.id}-current-time`)!;
     avgTimeEls[sim.id] = document.getElementById(`${sim.id}-avg-time`)!;
     p99TimeEls[sim.id] = document.getElementById(`${sim.id}-p99-time`)!;
     fpsEls[sim.id] = document.getElementById(`${sim.id}-fps`)!;
-    canvases[sim.id] = document.getElementById(`canvas-${sim.id}`) as HTMLCanvasElement;
+    canvases[sim.id] = document.getElementById(
+      `canvas-${sim.id}`,
+    ) as HTMLCanvasElement;
   });
 
   resizeCanvases();
@@ -361,20 +409,31 @@ export function setupUIListeners(callbacks: UICallbacks) {
     try {
       const hash = window.location.hash;
       const query = window.location.search;
-      isVisualizerVisible = hash.includes('vis=expanded') || hash.includes('vis=true') || query.includes('vis=true');
+      isVisualizerVisible =
+        hash.includes('vis=expanded') ||
+        hash.includes('vis=true') ||
+        query.includes('vis=true');
     } catch (e) {}
 
     const grid = document.querySelector('.visualizer-grid');
-    btnToggleVisualizer.textContent = isVisualizerVisible ? 'Hide Visualizations' : 'Show Visualizations';
+    btnToggleVisualizer.textContent = isVisualizerVisible
+      ? 'Hide Visualizations'
+      : 'Show Visualizations';
     if (grid) grid.classList.toggle('hidden', !isVisualizerVisible);
 
     btnToggleVisualizer.addEventListener('click', () => {
       isVisualizerVisible = !isVisualizerVisible;
       try {
         const hashStr = isVisualizerVisible ? '#vis=expanded' : '';
-        history.replaceState(null, '', window.location.pathname + window.location.search + hashStr);
+        history.replaceState(
+          null,
+          '',
+          window.location.pathname + window.location.search + hashStr,
+        );
       } catch (e) {}
-      btnToggleVisualizer.textContent = isVisualizerVisible ? 'Hide Visualizations' : 'Show Visualizations';
+      btnToggleVisualizer.textContent = isVisualizerVisible
+        ? 'Hide Visualizations'
+        : 'Show Visualizations';
       if (grid) {
         grid.classList.toggle('hidden', !isVisualizerVisible);
         if (isVisualizerVisible) {
@@ -392,7 +451,7 @@ export function setupUIListeners(callbacks: UICallbacks) {
     checkbox.addEventListener('change', () => {
       const active = checkbox.checked;
       currentPresetId = '';
-      document.querySelectorAll('.preset-btn').forEach(b => {
+      document.querySelectorAll('.preset-btn').forEach((b) => {
         b.classList.remove('active');
         b.setAttribute('aria-selected', 'false');
       });
@@ -401,7 +460,7 @@ export function setupUIListeners(callbacks: UICallbacks) {
     });
   };
 
-  SIMULATOR_REGISTRY.forEach(sim => {
+  SIMULATOR_REGISTRY.forEach((sim) => {
     const cb = toggles[sim.id];
     if (cb) {
       handleToggle(sim.id, cb);
@@ -409,9 +468,9 @@ export function setupUIListeners(callbacks: UICallbacks) {
   });
 
   generatePresets((preset) => {
-    const updates = SIMULATOR_REGISTRY.map(sim => ({
+    const updates = SIMULATOR_REGISTRY.map((sim) => ({
       id: sim.id,
-      active: preset.simulatorIds.includes(sim.id)
+      active: preset.simulatorIds.includes(sim.id),
     }));
 
     updates.forEach(({ id, active }) => {
@@ -433,12 +492,18 @@ export function setupUIListeners(callbacks: UICallbacks) {
       currentPresetId = 'all';
       const descEl = document.getElementById('preset-desc-text');
       if (descEl) descEl.textContent = PRESETS[0].description;
-      document.querySelectorAll('.preset-btn').forEach(b => {
+      document.querySelectorAll('.preset-btn').forEach((b) => {
         b.classList.toggle('active', b.id === 'btn-preset-all');
-        b.setAttribute('aria-selected', b.id === 'btn-preset-all' ? 'true' : 'false');
+        b.setAttribute(
+          'aria-selected',
+          b.id === 'btn-preset-all' ? 'true' : 'false',
+        );
       });
 
-      const updates = SIMULATOR_REGISTRY.map(sim => ({ id: sim.id, active: true }));
+      const updates = SIMULATOR_REGISTRY.map((sim) => ({
+        id: sim.id,
+        active: true,
+      }));
       updates.forEach(({ id }) => {
         const cb = toggles[id];
         if (cb) cb.checked = true;
@@ -449,12 +514,15 @@ export function setupUIListeners(callbacks: UICallbacks) {
 
     btnSelectNone.addEventListener('click', () => {
       currentPresetId = '';
-      document.querySelectorAll('.preset-btn').forEach(b => {
+      document.querySelectorAll('.preset-btn').forEach((b) => {
         b.classList.remove('active');
         b.setAttribute('aria-selected', 'false');
       });
 
-      const updates = SIMULATOR_REGISTRY.map(sim => ({ id: sim.id, active: false }));
+      const updates = SIMULATOR_REGISTRY.map((sim) => ({
+        id: sim.id,
+        active: false,
+      }));
       updates.forEach(({ id }) => {
         const cb = toggles[id];
         if (cb) cb.checked = false;
@@ -483,7 +551,11 @@ function updateCoherenceDesc(behavior: string) {
   }
 }
 
-export function updateUI(numEntities: number, speedMultiplier: number, benchmarkLength: number) {
+export function updateUI(
+  numEntities: number,
+  speedMultiplier: number,
+  benchmarkLength: number,
+) {
   entityVal.textContent = numEntities.toLocaleString();
   speedVal.textContent = speedMultiplier.toFixed(1) + 'x';
   lengthVal.textContent = benchmarkLength.toLocaleString() + ' frames';
@@ -508,17 +580,25 @@ export function setPauseButtonText(text: string) {
   btnPause.textContent = text;
 }
 
-export function setButtonDisabledStates(runDisabled: boolean, pauseDisabled: boolean) {
+export function setButtonDisabledStates(
+  runDisabled: boolean,
+  pauseDisabled: boolean,
+) {
   btnRun.disabled = runDisabled;
   btnPause.disabled = pauseDisabled;
 }
 
 export function resetUIElements(
-  defaultValues: { entityCount: number; speed: number; length: number; behavior: string },
+  defaultValues: {
+    entityCount: number;
+    speed: number;
+    length: number;
+    behavior: string;
+  },
   activeSims: string[],
-  baselineId: string
+  baselineId: string,
 ) {
-  SIMULATOR_REGISTRY.forEach(sim => {
+  SIMULATOR_REGISTRY.forEach((sim) => {
     if (currentTimeEls[sim.id]) currentTimeEls[sim.id].textContent = '0.00 ms';
     if (avgTimeEls[sim.id]) avgTimeEls[sim.id].textContent = '0.00 ms';
     if (p99TimeEls[sim.id]) p99TimeEls[sim.id].textContent = '0.00 ms';
@@ -527,7 +607,7 @@ export function resetUIElements(
 
   renderInitialSpeedups(activeSims, baselineId);
   chartFrameIndexEl.textContent = '0';
-  
+
   statusPulse.className = 'pulse-indicator';
   statusText.textContent = 'Ready';
 
@@ -552,7 +632,7 @@ export function updateMetricsDisplay(data: {
 }) {
   chartFrameIndexEl.textContent = data.currentFrame.toString();
 
-  SIMULATOR_REGISTRY.forEach(sim => {
+  SIMULATOR_REGISTRY.forEach((sim) => {
     const time = data.times[sim.id] ?? 0;
     const currentEl = currentTimeEls[sim.id];
     if (currentEl) {
@@ -560,9 +640,10 @@ export function updateMetricsDisplay(data: {
     }
   });
 
-  const avg = (arr: number[]) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+  const avg = (arr: number[]) =>
+    arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
   const averages: Record<string, number> = {};
-  SIMULATOR_REGISTRY.forEach(sim => {
+  SIMULATOR_REGISTRY.forEach((sim) => {
     const hist = data.history[sim.id] || [];
     const val = avg(hist);
     averages[sim.id] = val;
@@ -578,7 +659,7 @@ export function updateMetricsDisplay(data: {
     return sorted[Math.floor(sorted.length * 0.99)] || current;
   };
 
-  SIMULATOR_REGISTRY.forEach(sim => {
+  SIMULATOR_REGISTRY.forEach((sim) => {
     const hist = data.history[sim.id] || [];
     const val = p99(hist, data.times[sim.id] ?? 0);
     const p99El = p99TimeEls[sim.id];
@@ -592,7 +673,7 @@ export function updateMetricsDisplay(data: {
     : 0;
 
   speedupValuesContainer.innerHTML = '';
-  
+
   if (data.activeSimulators.length <= 1) {
     const emptyRow = document.createElement('div');
     emptyRow.className = 'speedup-row font-mono';
@@ -602,16 +683,19 @@ export function updateMetricsDisplay(data: {
     speedupValuesContainer.appendChild(emptyRow);
   } else {
     for (const sim of SIMULATOR_REGISTRY) {
-      if (sim.id !== data.baselineSimulatorId && data.activeSimulators.includes(sim.id)) {
+      if (
+        sim.id !== data.baselineSimulatorId &&
+        data.activeSimulators.includes(sim.id)
+      ) {
         const row = document.createElement('div');
         row.className = 'speedup-row';
-        
+
         const label = document.createElement('span');
         label.textContent = `${sim.name}:`;
-        
+
         const valueSpan = document.createElement('span');
         valueSpan.className = 'font-mono';
-        
+
         const targetAvg = averages[sim.id];
         if (baselineAvg > 0 && targetAvg > 0) {
           const ratio = baselineAvg / targetAvg;
@@ -627,7 +711,7 @@ export function updateMetricsDisplay(data: {
           valueSpan.textContent = '--';
           valueSpan.style.color = 'var(--color-text-dim)';
         }
-        
+
         row.appendChild(label);
         row.appendChild(valueSpan);
         speedupValuesContainer.appendChild(row);
@@ -672,12 +756,15 @@ function resizeCanvases() {
 
   if (w === 0 || h === 0) {
     const sectionEl = document.querySelector('.section-output');
-    w = (sectionEl && sectionEl.clientWidth > 0) ? sectionEl.clientWidth : window.innerWidth;
+    w =
+      sectionEl && sectionEl.clientWidth > 0
+        ? sectionEl.clientWidth
+        : window.innerWidth;
     h = 500;
   }
 
   if (w > 0 && h > 0) {
-    SIMULATOR_REGISTRY.forEach(sim => {
+    SIMULATOR_REGISTRY.forEach((sim) => {
       const canvas = canvases[sim.id];
       if (canvas) {
         if (canvas.width !== w || canvas.height !== h) {
@@ -721,7 +808,10 @@ export function toggleCardVisibility(id: string, visible: boolean) {
   resizeCanvases();
 }
 
-export function updateBaselineOptions(activeSims: string[], selectedBaselineId: string) {
+export function updateBaselineOptions(
+  activeSims: string[],
+  selectedBaselineId: string,
+) {
   compareBaselineSelect.innerHTML = '';
   for (const sim of SIMULATOR_REGISTRY) {
     if (activeSims.includes(sim.id)) {
@@ -734,9 +824,12 @@ export function updateBaselineOptions(activeSims: string[], selectedBaselineId: 
   }
 }
 
-export function renderInitialSpeedups(activeSims: string[], baselineId: string) {
+export function renderInitialSpeedups(
+  activeSims: string[],
+  baselineId: string,
+) {
   speedupValuesContainer.innerHTML = '';
-  
+
   if (activeSims.length <= 1) {
     const emptyRow = document.createElement('div');
     emptyRow.className = 'speedup-row font-mono';
@@ -749,15 +842,15 @@ export function renderInitialSpeedups(activeSims: string[], baselineId: string) 
       if (sim.id !== baselineId && activeSims.includes(sim.id)) {
         const row = document.createElement('div');
         row.className = 'speedup-row';
-        
+
         const label = document.createElement('span');
         label.textContent = `${sim.name}:`;
-        
+
         const valueSpan = document.createElement('span');
         valueSpan.className = 'font-mono';
         valueSpan.textContent = '--';
         valueSpan.style.color = 'var(--color-text-dim)';
-        
+
         row.appendChild(label);
         row.appendChild(valueSpan);
         speedupValuesContainer.appendChild(row);

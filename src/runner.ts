@@ -9,7 +9,7 @@ import {
   setPauseButtonText,
   setButtonDisabledStates,
   resetUIElements,
-  updateMetricsDisplay
+  updateMetricsDisplay,
 } from './ui';
 import { SeededPRNG } from './prng';
 
@@ -50,23 +50,27 @@ export class BenchmarkRunner {
   private fpsTimer = 0;
 
   constructor() {
-    this.simulators = SIMULATOR_REGISTRY.map(sim => ({
+    this.simulators = SIMULATOR_REGISTRY.map((sim) => ({
       id: sim.id,
       name: sim.name,
-      instance: sim.createInstance()
+      instance: sim.createInstance(),
     }));
 
     // Seeded PRNGs
-    SIMULATOR_REGISTRY.forEach(sim => {
+    SIMULATOR_REGISTRY.forEach((sim) => {
       this.prngs[sim.id] = new SeededPRNG();
     });
 
     const storedActiveIds = this.getStoredActiveSimulatorIds();
     if (storedActiveIds && storedActiveIds.length > 0) {
-      this.activeSimulators = this.simulators.filter(s => storedActiveIds.includes(s.id));
+      this.activeSimulators = this.simulators.filter((s) =>
+        storedActiveIds.includes(s.id),
+      );
     }
     if (this.activeSimulators.length === 0) {
-      this.activeSimulators = this.simulators.filter((_, idx) => SIMULATOR_REGISTRY[idx].activeByDefault);
+      this.activeSimulators = this.simulators.filter(
+        (_, idx) => SIMULATOR_REGISTRY[idx].activeByDefault,
+      );
     }
   }
 
@@ -81,7 +85,7 @@ export class BenchmarkRunner {
 
   public initContexts() {
     this.contexts = {};
-    SIMULATOR_REGISTRY.forEach(sim => {
+    SIMULATOR_REGISTRY.forEach((sim) => {
       const canvas = canvases[sim.id];
       if (canvas) {
         this.contexts[sim.id] = canvas.getContext('2d')!;
@@ -117,7 +121,7 @@ export class BenchmarkRunner {
     this.warmupFrame = 0;
     this.currentFrame = 0;
     this.totalFramesProcessed = 0;
-    
+
     if (this.animationFrameId !== null) {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
@@ -129,17 +133,17 @@ export class BenchmarkRunner {
 
     resetChartLabels();
     this.initEntities();
-    
+
     // Reset UI elements
     resetUIElements(
       {
         entityCount: this.numEntities,
         speed: this.speedMultiplier,
         length: this.benchmarkLength,
-        behavior: this.movementBehavior
+        behavior: this.movementBehavior,
       },
-      this.activeSimulators.map(s => s.id),
-      this.baselineSimulatorId
+      this.activeSimulators.map((s) => s.id),
+      this.baselineSimulatorId,
     );
 
     // Render initial state
@@ -152,17 +156,23 @@ export class BenchmarkRunner {
         }
       }
     }
-    
+
     this.drawChart();
   }
 
   public drawChart() {
     const timesMap: Record<string, number[]> = {};
-    this.activeSimulators.forEach(sim => {
+    this.activeSimulators.forEach((sim) => {
       timesMap[sim.id] = sim.instance.getTimes();
     });
-    
-    drawChartSVG('svg-chart-container', timesMap, this.benchmarkLength, this.useLogScale, this.useZeroBaseline);
+
+    drawChartSVG(
+      'svg-chart-container',
+      timesMap,
+      this.benchmarkLength,
+      this.useLogScale,
+      this.useZeroBaseline,
+    );
   }
 
   public startBenchmark() {
@@ -213,8 +223,10 @@ export class BenchmarkRunner {
     this.frameCount++;
     if (this.fpsTimer >= 1000) {
       const fpsMap: Record<string, number> = {};
-      SIMULATOR_REGISTRY.forEach(sim => {
-        fpsMap[sim.id] = this.activeSimulators.some(s => s.id === sim.id) ? this.frameCount : 0;
+      SIMULATOR_REGISTRY.forEach((sim) => {
+        fpsMap[sim.id] = this.activeSimulators.some((s) => s.id === sim.id)
+          ? this.frameCount
+          : 0;
       });
       updateFps(fpsMap);
       this.frameCount = 0;
@@ -236,14 +248,23 @@ export class BenchmarkRunner {
     const times: Record<string, number> = {};
     for (const sim of this.activeSimulators) {
       const prng = this.prngs[sim.id];
-      const result = sim.instance.update(w, h, this.speedMultiplier, this.movementBehavior, prng);
+      const result = sim.instance.update(
+        w,
+        h,
+        this.speedMultiplier,
+        this.movementBehavior,
+        prng,
+      );
       times[sim.id] = result.time;
     }
 
     // Handle Warmup vs Recording
     if (this.isWarmingUp) {
       this.warmupFrame++;
-      updateStatus(`Warmup (${this.warmupFrame}/${this.warmupFramesCount})`, 'running');
+      updateStatus(
+        `Warmup (${this.warmupFrame}/${this.warmupFramesCount})`,
+        'running',
+      );
       if (this.warmupFrame >= this.warmupFramesCount) {
         this.isWarmingUp = false;
         for (const s of this.simulators) {
@@ -253,12 +274,12 @@ export class BenchmarkRunner {
       }
     } else {
       this.currentFrame++;
-      
+
       const timesMap: Record<string, number> = {};
       const historyMap: Record<string, number[]> = {};
-      
-      SIMULATOR_REGISTRY.forEach(sim => {
-        const instantiatedSim = this.simulators.find(s => s.id === sim.id)!;
+
+      SIMULATOR_REGISTRY.forEach((sim) => {
+        const instantiatedSim = this.simulators.find((s) => s.id === sim.id)!;
         const isActive = this.activeSimulators.includes(instantiatedSim);
         timesMap[sim.id] = isActive ? times[sim.id] : 0;
         historyMap[sim.id] = instantiatedSim.instance.getTimes();
@@ -268,8 +289,8 @@ export class BenchmarkRunner {
         currentFrame: this.currentFrame,
         times: timesMap,
         history: historyMap,
-        activeSimulators: this.activeSimulators.map(s => s.id),
-        baselineSimulatorId: this.baselineSimulatorId
+        activeSimulators: this.activeSimulators.map((s) => s.id),
+        baselineSimulatorId: this.baselineSimulatorId,
       });
 
       this.drawChart();
@@ -306,11 +327,11 @@ export class BenchmarkRunner {
     const timesMap: Record<string, number> = {};
     const historyMap: Record<string, number[]> = {};
 
-    SIMULATOR_REGISTRY.forEach(sim => {
-      const instantiatedSim = this.simulators.find(s => s.id === sim.id)!;
+    SIMULATOR_REGISTRY.forEach((sim) => {
+      const instantiatedSim = this.simulators.find((s) => s.id === sim.id)!;
       const isActive = this.activeSimulators.includes(instantiatedSim);
       const times = instantiatedSim.instance.getTimes();
-      timesMap[sim.id] = isActive ? (times[times.length - 1] || 0) : 0;
+      timesMap[sim.id] = isActive ? times[times.length - 1] || 0 : 0;
       historyMap[sim.id] = times;
     });
 
@@ -318,18 +339,26 @@ export class BenchmarkRunner {
       currentFrame: this.currentFrame,
       times: timesMap,
       history: historyMap,
-      activeSimulators: this.activeSimulators.map(s => s.id),
-      baselineSimulatorId: this.baselineSimulatorId
+      activeSimulators: this.activeSimulators.map((s) => s.id),
+      baselineSimulatorId: this.baselineSimulatorId,
     });
   }
 
   public getResultsMarkdown(): string {
-    const coherenceLabel = this.movementBehavior.charAt(0).toUpperCase() + this.movementBehavior.slice(1);
-    
-    const baselineSim = this.simulators.find(s => s.id === this.baselineSimulatorId);
+    const coherenceLabel =
+      this.movementBehavior.charAt(0).toUpperCase() +
+      this.movementBehavior.slice(1);
+
+    const baselineSim = this.simulators.find(
+      (s) => s.id === this.baselineSimulatorId,
+    );
     const baselineTimes = baselineSim ? baselineSim.instance.getTimes() : [];
-    const avgBaseline = baselineTimes.length ? baselineTimes.reduce((a, b) => a + b, 0) / baselineTimes.length : 0;
-    const baselineActive = baselineSim ? this.activeSimulators.includes(baselineSim) : false;
+    const avgBaseline = baselineTimes.length
+      ? baselineTimes.reduce((a, b) => a + b, 0) / baselineTimes.length
+      : 0;
+    const baselineActive = baselineSim
+      ? this.activeSimulators.includes(baselineSim)
+      : false;
 
     let tableRows = '';
     for (const sim of this.activeSimulators) {
@@ -338,14 +367,15 @@ export class BenchmarkRunner {
       const avg = times.length ? sum / times.length : 0;
       const sorted = [...times].sort((a, b) => a - b);
       const p99 = sorted[Math.floor(sorted.length * 0.99)] || 0;
-      
+
       let speedupText = '1.00x';
       if (sim.id !== this.baselineSimulatorId) {
-        speedupText = (baselineActive && avg > 0 && avgBaseline > 0) 
-          ? `${(avgBaseline / avg).toFixed(2)}x` 
-          : '--';
+        speedupText =
+          baselineActive && avg > 0 && avgBaseline > 0
+            ? `${(avgBaseline / avg).toFixed(2)}x`
+            : '--';
       }
-      
+
       tableRows += `| ${sim.name} | ${avg.toFixed(3)} ms | ${p99.toFixed(3)} ms | ${speedupText} |\n`;
     }
 

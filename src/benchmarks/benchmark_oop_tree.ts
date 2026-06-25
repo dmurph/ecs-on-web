@@ -1,7 +1,11 @@
 import { GameEntity } from './benchmark_oop';
 import { SeededPRNG } from '../prng';
 import type { Simulator, EntityState, RenderEntity } from '../simulator';
-import { ENTITY_MAX_SPEED, TREE_REBALANCE_FRAME_INTERVAL, TREE_REBALANCE_PERCENTAGE } from '../config';
+import {
+  ENTITY_MAX_SPEED,
+  TREE_REBALANCE_FRAME_INTERVAL,
+  TREE_REBALANCE_PERCENTAGE,
+} from '../config';
 
 export class TreeNode {
   id: number;
@@ -12,7 +16,13 @@ export class TreeNode {
   entity: TreeGameEntity | null = null; // Direct reference
   height: number = 0;
 
-  constructor(id: number, minX: number, minY: number, maxX: number, maxY: number) {
+  constructor(
+    id: number,
+    minX: number,
+    minY: number,
+    maxX: number,
+    maxY: number,
+  ) {
     this.id = id;
     this.aabb = { minX, minY, maxX, maxY };
   }
@@ -25,7 +35,6 @@ export class TreeNode {
 export class TreeGameEntity extends GameEntity {
   leaf: TreeNode | null = null;
 }
-
 
 export class AABBTree {
   root: TreeNode | null = null;
@@ -83,7 +92,7 @@ export class AABBTree {
       } else {
         const oldArea = getArea(left.aabb);
         const newArea = getArea(union(left.aabb, leafAABB));
-        costLeft = (newArea - oldArea) + inheritanceCost;
+        costLeft = newArea - oldArea + inheritanceCost;
       }
 
       // Cost of descending right
@@ -93,7 +102,7 @@ export class AABBTree {
       } else {
         const oldArea = getArea(right.aabb);
         const newArea = getArea(union(right.aabb, leafAABB));
-        costRight = (newArea - oldArea) + inheritanceCost;
+        costRight = newArea - oldArea + inheritanceCost;
       }
 
       // Descend according to the minimum cost
@@ -116,7 +125,7 @@ export class AABBTree {
       Math.min(sibling.aabb.minX, leafAABB.minX),
       Math.min(sibling.aabb.minY, leafAABB.minY),
       Math.max(sibling.aabb.maxX, leafAABB.maxX),
-      Math.max(sibling.aabb.maxY, leafAABB.maxY)
+      Math.max(sibling.aabb.maxY, leafAABB.maxY),
     );
     newParent.parent = oldParent;
     newParent.height = sibling.height + 1;
@@ -161,7 +170,7 @@ export class AABBTree {
 
     const parent = leaf.parent!;
     const grandparent = parent.parent;
-    const sibling = (parent.left === leaf) ? parent.right! : parent.left!;
+    const sibling = parent.left === leaf ? parent.right! : parent.left!;
 
     if (grandparent !== null) {
       if (grandparent.left === parent) {
@@ -199,26 +208,32 @@ export class AABBTree {
 
 function union(
   a: { minX: number; minY: number; maxX: number; maxY: number },
-  b: { minX: number; minY: number; maxX: number; maxY: number }
+  b: { minX: number; minY: number; maxX: number; maxY: number },
 ) {
   return {
     minX: Math.min(a.minX, b.minX),
     minY: Math.min(a.minY, b.minY),
     maxX: Math.max(a.maxX, b.maxX),
-    maxY: Math.max(a.maxY, b.maxY)
+    maxY: Math.max(a.maxY, b.maxY),
   };
 }
 
-function getArea(aabb: { minX: number; minY: number; maxX: number; maxY: number }): number {
+function getArea(aabb: {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}): number {
   return (aabb.maxX - aabb.minX) * (aabb.maxY - aabb.minY);
 }
 
 function overlaps(
   a: { minX: number; minY: number; maxX: number; maxY: number },
-  b: { minX: number; minY: number; maxX: number; maxY: number }
+  b: { minX: number; minY: number; maxX: number; maxY: number },
 ): boolean {
-  return a.minX <= b.maxX && a.maxX >= b.minX &&
-         a.minY <= b.maxY && a.maxY >= b.minY;
+  return (
+    a.minX <= b.maxX && a.maxX >= b.minX && a.minY <= b.maxY && a.maxY >= b.minY
+  );
 }
 
 function balance(tree: AABBTree, i: TreeNode): TreeNode {
@@ -332,21 +347,21 @@ export function updateTree(
   entities: TreeGameEntity[],
   moveBuffer: TreeGameEntity[],
   movedFrameCount: number,
-  prng?: SeededPRNG
+  prng?: SeededPRNG,
 ) {
   const numMoves = moveBuffer.length;
   const margin = 2.0; // Fat margin to reduce updates
-  
+
   for (let k = 0; k < numMoves; k++) {
     const entity = moveBuffer[k];
     const leaf = entity.leaf!;
-    
+
     tree.removeLeaf(leaf);
     leaf.aabb = {
       minX: entity.x - margin,
       minY: entity.y - margin,
       maxX: entity.x + entity.w + margin,
-      maxY: entity.y + entity.h + margin
+      maxY: entity.y + entity.h + margin,
     };
     tree.insertLeaf(leaf);
   }
@@ -354,9 +369,14 @@ export function updateTree(
   // Incremental optimization: rebalance according to configured intervals
   if (numMoves > 0 && movedFrameCount % TREE_REBALANCE_FRAME_INTERVAL === 0) {
     const len = entities.length;
-    const numToOptimize = Math.max(1, Math.floor(len * TREE_REBALANCE_PERCENTAGE));
+    const numToOptimize = Math.max(
+      1,
+      Math.floor(len * TREE_REBALANCE_PERCENTAGE),
+    );
     for (let k = 0; k < numToOptimize; k++) {
-      const idx = prng ? Math.floor(prng.next() * len) : Math.floor(Math.random() * len);
+      const idx = prng
+        ? Math.floor(prng.next() * len)
+        : Math.floor(Math.random() * len);
       const leaf = entities[idx].leaf;
       if (leaf) {
         tree.removeLeaf(leaf);
@@ -374,7 +394,7 @@ const mainStack = new Array<TreeNode | null>(1024).fill(null);
 function queryOverlapIter(
   startNodeA: TreeNode,
   startNodeB: TreeNode,
-  callback: (nodeA: TreeNode, nodeB: TreeNode) => void
+  callback: (nodeA: TreeNode, nodeB: TreeNode) => void,
 ) {
   let stackPtr = 0;
   stackA[0] = startNodeA;
@@ -395,7 +415,7 @@ function queryOverlapIter(
       callback(nodeA, nodeB);
     } else if (isLeafA) {
       if (stackPtr + 2 > stackA.length) {
-         throw new Error("AABBTree: Stack overflow in queryOverlap");
+        throw new Error('AABBTree: Stack overflow in queryOverlap');
       }
       stackA[stackPtr] = nodeA;
       stackB[stackPtr] = nodeB.left!;
@@ -404,7 +424,7 @@ function queryOverlapIter(
       stackPtr += 2;
     } else if (isLeafB) {
       if (stackPtr + 2 > stackA.length) {
-         throw new Error("AABBTree: Stack overflow in queryOverlap");
+        throw new Error('AABBTree: Stack overflow in queryOverlap');
       }
       stackA[stackPtr] = nodeA.left!;
       stackB[stackPtr] = nodeB;
@@ -413,7 +433,7 @@ function queryOverlapIter(
       stackPtr += 2;
     } else {
       if (stackPtr + 2 > stackA.length) {
-         throw new Error("AABBTree: Stack overflow in queryOverlap");
+        throw new Error('AABBTree: Stack overflow in queryOverlap');
       }
       if (nodeA.height > nodeB.height) {
         stackA[stackPtr] = nodeA.left!;
@@ -431,7 +451,6 @@ function queryOverlapIter(
   }
 }
 
-
 /**
  * Step 1: Update movements
  * Updates positions for traditional OOP objects (`TreeGameEntity`) scattered across heap memory.
@@ -444,7 +463,7 @@ export function updateMovement(
   speedMultiplier: number,
   behavior: string,
   prng: SeededPRNG,
-  outMoveBuffer: TreeGameEntity[]
+  outMoveBuffer: TreeGameEntity[],
 ) {
   const len = entities.length;
   outMoveBuffer.length = 0; // Clear it
@@ -493,8 +512,12 @@ export function updateMovement(
         const minY = entity.y;
         const maxX = entity.x + entity.w;
         const maxY = entity.y + entity.h;
-        if (minX < leaf.aabb.minX || maxX > leaf.aabb.maxX ||
-            minY < leaf.aabb.minY || maxY > leaf.aabb.maxY) {
+        if (
+          minX < leaf.aabb.minX ||
+          maxX > leaf.aabb.maxX ||
+          minY < leaf.aabb.minY ||
+          maxY > leaf.aabb.maxY
+        ) {
           outMoveBuffer.push(entity);
         }
       }
@@ -512,8 +535,12 @@ export function updateMovement(
         const minY = entity.y;
         const maxX = entity.x + entity.w;
         const maxY = entity.y + entity.h;
-        if (minX < leaf.aabb.minX || maxX > leaf.aabb.maxX ||
-            minY < leaf.aabb.minY || maxY > leaf.aabb.maxY) {
+        if (
+          minX < leaf.aabb.minX ||
+          maxX > leaf.aabb.maxX ||
+          minY < leaf.aabb.minY ||
+          maxY > leaf.aabb.maxY
+        ) {
           outMoveBuffer.push(entity);
         }
       }
@@ -528,7 +555,7 @@ export function updateMovement(
  */
 export function runBroadphase(
   root: TreeNode | null,
-  outPairsBuffer: Int32Array
+  outPairsBuffer: Int32Array,
 ): number {
   let pairCount = 0;
   if (root === null || root.left === null) return 0;
@@ -544,7 +571,12 @@ export function runBroadphase(
     queryOverlapIter(node.left!, node.right!, (nodeA, nodeB) => {
       const a = nodeA.entity!;
       const b = nodeB.entity!;
-      if (a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y) {
+      if (
+        a.x < b.x + b.w &&
+        a.x + a.w > b.x &&
+        a.y < b.y + b.h &&
+        a.y + a.h > b.y
+      ) {
         if (pairCount * 2 + 1 < outPairsBuffer.length) {
           outPairsBuffer[pairCount * 2] = a.id;
           outPairsBuffer[pairCount * 2 + 1] = b.id;
@@ -557,12 +589,14 @@ export function runBroadphase(
     const rightChild = node.right!;
 
     if (leftChild.left !== null) {
-      if (stackPtr + 1 > mainStack.length) throw new Error("AABBTree: Main stack overflow");
+      if (stackPtr + 1 > mainStack.length)
+        throw new Error('AABBTree: Main stack overflow');
       mainStack[stackPtr] = leftChild;
       stackPtr++;
     }
     if (rightChild.left !== null) {
-      if (stackPtr + 1 > mainStack.length) throw new Error("AABBTree: Main stack overflow");
+      if (stackPtr + 1 > mainStack.length)
+        throw new Error('AABBTree: Main stack overflow');
       mainStack[stackPtr] = rightChild;
       stackPtr++;
     }
@@ -579,7 +613,7 @@ export function resolveCollisions(
   entities: TreeGameEntity[],
   pairsBuffer: Int32Array,
   pairsCount: number,
-  isColliding: Uint8Array
+  isColliding: Uint8Array,
 ): number {
   let collisionCount = 0;
 
@@ -645,17 +679,16 @@ export function resolveCollisions(
 
 /**
  * Simulator representing an OOP model using a dynamic AABB Tree for broadphase.
- * 
+ *
  * Data Layout: Array of Objects (AoS).
  * Each entity holds a direct reference to its corresponding AABB tree node (`leaf`).
  * Each leaf holds a direct reference back to the `entity`.
- * 
+ *
  * Algorithm: Dynamic AABB Tree with a fat margin (+2.0px).
  * Entities only trigger tree re-insertion when they move outside their fat margin,
  * allowing sub-linear updates during highly coherent motion.
  */
 export class OOPTreeSimulator implements Simulator {
-
   private entities: TreeGameEntity[] = [];
   private entitiesById: TreeGameEntity[] = [];
   private tree: AABBTree | null = null;
@@ -689,7 +722,7 @@ export class OOPTreeSimulator implements Simulator {
         entity.x - margin,
         entity.y - margin,
         entity.x + entity.w + margin,
-        entity.y + entity.h + margin
+        entity.y + entity.h + margin,
       );
       leaf.entity = entity;
       entity.leaf = leaf;
@@ -709,28 +742,53 @@ export class OOPTreeSimulator implements Simulator {
    * 2. Tree updates (re-calculating bounds and re-inserting nodes that escaped fat margins).
    * 3. AABB tree broadphase (recursive overlap search between branches/leaves).
    * 4. Narrowphase resolution (circle overlap checks and bounce impulses).
-   * 
+   *
    * This measures the algorithmic benefit of dynamic AABB trees (sub-linear broadphase updates)
    * vs the overhead of tree traversal pointers and AoS heap lookups.
    */
-  update(width: number, height: number, speedMultiplier: number, behavior: string, prng: SeededPRNG): { time: number, collisionCount: number } {
+  update(
+    width: number,
+    height: number,
+    speedMultiplier: number,
+    behavior: string,
+    prng: SeededPRNG,
+  ): { time: number; collisionCount: number } {
     const start = performance.now();
     let collisionCount = 0;
     if (this.tree) {
       this.moveBuffer = [];
       // Step 1: Update movements
-      updateMovement(this.entities, width, height, speedMultiplier, behavior, prng, this.moveBuffer);
+      updateMovement(
+        this.entities,
+        width,
+        height,
+        speedMultiplier,
+        behavior,
+        prng,
+        this.moveBuffer,
+      );
       if (this.moveBuffer.length > 0) {
         this.movedFrameCount++;
       }
       // Step 2a: Update tree (Broadphase)
-      updateTree(this.tree, this.entities, this.moveBuffer, this.movedFrameCount, prng);
+      updateTree(
+        this.tree,
+        this.entities,
+        this.moveBuffer,
+        this.movedFrameCount,
+        prng,
+      );
       // Step 2b: Broadphase queries
       const pairsCount = runBroadphase(this.tree.root, this.pairsBuffer);
-      
+
       this.colliding.fill(0);
       // Step 3: Narrowphase
-      collisionCount = resolveCollisions(this.entities, this.pairsBuffer, pairsCount, this.colliding);
+      collisionCount = resolveCollisions(
+        this.entities,
+        this.pairsBuffer,
+        pairsCount,
+        this.colliding,
+      );
     }
     const end = performance.now();
     const time = end - start;
@@ -743,17 +801,26 @@ export class OOPTreeSimulator implements Simulator {
     return this.entities;
   }
 
-  getTimes() { return this.times; }
-  clearTimes() { this.times = []; }
+  getTimes() {
+    return this.times;
+  }
+  clearTimes() {
+    this.times = [];
+  }
 
   /**
    * Gets positions for synchronization.
    */
   getPositions(): EntityState[] {
-    return this.entitiesById.map(e => ({
-      x: e.x, y: e.y, w: e.w, h: e.h,
-      vx: e.vx, vy: e.vy, angle: e.angle,
-      color: e.color
+    return this.entitiesById.map((e) => ({
+      x: e.x,
+      y: e.y,
+      w: e.w,
+      h: e.h,
+      vx: e.vx,
+      vy: e.vy,
+      angle: e.angle,
+      color: e.color,
     }));
   }
 
@@ -769,15 +836,20 @@ export class OOPTreeSimulator implements Simulator {
     for (let i = 0; i < this.entitiesById.length; i++) {
       const e = this.entitiesById[i];
       const p = positions[i];
-      e.x = p.x; e.y = p.y; e.w = p.w; e.h = p.h;
-      e.vx = p.vx; e.vy = p.vy; e.angle = p.angle;
+      e.x = p.x;
+      e.y = p.y;
+      e.w = p.w;
+      e.h = p.h;
+      e.vx = p.vx;
+      e.vy = p.vy;
+      e.angle = p.angle;
       e.color = p.color;
 
       const leaf = this.tree.createNode(
         e.x - margin,
         e.y - margin,
         e.x + e.w + margin,
-        e.y + e.h + margin
+        e.y + e.h + margin,
       );
       leaf.entity = e;
       e.leaf = leaf;
@@ -790,5 +862,5 @@ export class OOPTreeSimulator implements Simulator {
 export {
   updateMovement as updateOOPTreeMovement,
   runBroadphase as runOOPTreeBroadphase,
-  resolveCollisions as resolveOOPTreePhysics
+  resolveCollisions as resolveOOPTreePhysics,
 };

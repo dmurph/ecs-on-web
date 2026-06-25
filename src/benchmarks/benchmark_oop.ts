@@ -2,8 +2,6 @@ import { ENTITY_COLORS, ENTITY_MAX_SPEED, SortMethod } from '../config';
 import type { SeededPRNG } from '../prng';
 import type { Simulator, EntityState, RenderEntity } from '../simulator';
 
-
-
 export class GameEntity {
   id: number;
   x: number;
@@ -13,7 +11,7 @@ export class GameEntity {
   color: string;
   name: string;
   inventory: number[];
-  
+
   vx: number;
   vy: number;
   angle: number;
@@ -27,7 +25,7 @@ export class GameEntity {
     this.h = size;
     this.x = Math.random() * (canvasWidth - this.w);
     this.y = Math.random() * (canvasHeight - this.h);
-    
+
     const colorIndex = Math.floor(Math.random() * ENTITY_COLORS.length);
     this.color = ENTITY_COLORS[colorIndex];
 
@@ -52,7 +50,7 @@ export function updateMovement(
   canvasHeight: number,
   speedMultiplier: number,
   behavior: string,
-  prng: SeededPRNG
+  prng: SeededPRNG,
 ) {
   const len = entitiesById.length;
   if (behavior === 'wander') {
@@ -110,7 +108,7 @@ export function updateMovement(
 export function runBroadphase(
   entities: GameEntity[],
   sortMethod: SortMethod = SortMethod.Insertion,
-  tempEntities?: GameEntity[]
+  tempEntities?: GameEntity[],
 ): number {
   let pairCount = 0;
   const len = entities.length;
@@ -155,7 +153,7 @@ export function runBroadphase(
 export function resolveCollisions(
   entities: GameEntity[],
   isColliding: Uint8Array,
-  outPairs: Int32Array
+  outPairs: Int32Array,
 ): number {
   let collisionCount = 0;
   const len = entities.length;
@@ -198,7 +196,7 @@ export function resolveCollisions(
         const rvx = b.vx - a.vx;
         const rvy = b.vy - a.vy;
         const velAlongNormal = rvx * nx + rvy * ny;
- 
+
         if (velAlongNormal < 0) {
           const impulse = -(2 * velAlongNormal) / (1 / massA + 1 / massB);
           a.vx -= (impulse / massA) * nx;
@@ -228,12 +226,12 @@ export function resolveCollisions(
 
 /**
  * Simulator representing a traditional Object-Oriented Programming (OOP) model.
- * 
+ *
  * Data Layout: Array of Objects (AoS).
  * Each entity is an instance of `GameEntity` allocated on the heap.
  * The entities array is shuffled after creation to simulate memory fragmentation
  * and reference scattering (cache misses) common in long-running OOP games.
- * 
+ *
  * Algorithm: Sweep-and-Prune (S&P) using 1D Insertion Sort along the X-axis.
  */
 export class OOPSimulator implements Simulator {
@@ -247,9 +245,7 @@ export class OOPSimulator implements Simulator {
   private pairsBuffer = new Int32Array(0);
   private maxCollisions = 200000;
 
-  constructor(
-    sortMethod: SortMethod = SortMethod.Insertion
-  ) {
+  constructor(sortMethod: SortMethod = SortMethod.Insertion) {
     this.sortMethod = sortMethod;
   }
 
@@ -268,7 +264,7 @@ export class OOPSimulator implements Simulator {
     // Shuffle primary array to break sequential cache hits on memory traversals
     this.entities.sort(() => prng.next() - 0.5);
     this.tempEntities = new Array(numEntities);
-    
+
     this.colliding = new Uint8Array(numEntities);
     this.pairsBuffer = new Int32Array(this.maxCollisions * 2);
   }
@@ -278,21 +274,38 @@ export class OOPSimulator implements Simulator {
    * 1. Movement updates (random walks or straight trajectories).
    * 2. Sweep-and-Prune broadphase (sorting along X axis and overlapping sweep).
    * 3. Narrowphase resolution (resolving circle bounces and updating velocities).
-   * 
+   *
    * We time all three steps because memory lookup overhead affects both broadphase sorting
    * and narrowphase object access patterns.
    */
-  update(width: number, height: number, speedMultiplier: number, behavior: string, prng: SeededPRNG): { time: number, collisionCount: number } {
+  update(
+    width: number,
+    height: number,
+    speedMultiplier: number,
+    behavior: string,
+    prng: SeededPRNG,
+  ): { time: number; collisionCount: number } {
     const start = performance.now();
     // Step 1: Update movements
-    updateMovement(this.entitiesById, width, height, speedMultiplier, behavior, prng);
+    updateMovement(
+      this.entitiesById,
+      width,
+      height,
+      speedMultiplier,
+      behavior,
+      prng,
+    );
     // Step 2: Broadphase
     runBroadphase(this.entities, this.sortMethod, this.tempEntities);
-    
+
     this.colliding.fill(0);
     // Step 3: Narrowphase
-    const collisionCount = resolveCollisions(this.entities, this.colliding, this.pairsBuffer);
-    
+    const collisionCount = resolveCollisions(
+      this.entities,
+      this.colliding,
+      this.pairsBuffer,
+    );
+
     const end = performance.now();
     const time = end - start;
     this.times.push(time);
@@ -303,18 +316,27 @@ export class OOPSimulator implements Simulator {
     return this.entities;
   }
 
-  getTimes() { return this.times; }
-  clearTimes() { this.times = []; }
+  getTimes() {
+    return this.times;
+  }
+  clearTimes() {
+    this.times = [];
+  }
 
   /**
    * Extracts the current physics state of all entities.
    * Used for synchronizing state with other simulators.
    */
   getPositions(): EntityState[] {
-    return this.entitiesById.map(e => ({
-      x: e.x, y: e.y, w: e.w, h: e.h,
-      vx: e.vx, vy: e.vy, angle: e.angle,
-      color: e.color
+    return this.entitiesById.map((e) => ({
+      x: e.x,
+      y: e.y,
+      w: e.w,
+      h: e.h,
+      vx: e.vx,
+      vy: e.vy,
+      angle: e.angle,
+      color: e.color,
     }));
   }
 
@@ -325,8 +347,13 @@ export class OOPSimulator implements Simulator {
     for (let i = 0; i < this.entitiesById.length; i++) {
       const e = this.entitiesById[i];
       const p = positions[i];
-      e.x = p.x; e.y = p.y; e.w = p.w; e.h = p.h;
-      e.vx = p.vx; e.vy = p.vy; e.angle = p.angle;
+      e.x = p.x;
+      e.y = p.y;
+      e.w = p.w;
+      e.h = p.h;
+      e.vx = p.vx;
+      e.vy = p.vy;
+      e.angle = p.angle;
       e.color = p.color;
     }
   }
@@ -336,11 +363,15 @@ export class OOPSimulator implements Simulator {
 export {
   updateMovement as updateOOPMovement,
   runBroadphase as runOOPBroadphase,
-  resolveCollisions as resolveOOPPhysics
+  resolveCollisions as resolveOOPPhysics,
 };
 
 // === INTERNAL SORTING ALGORITHMS ===
-function insertionSortRangeOOP(entities: GameEntity[], left: number, right: number) {
+function insertionSortRangeOOP(
+  entities: GameEntity[],
+  left: number,
+  right: number,
+) {
   for (let i = left + 1; i <= right; i++) {
     const current = entities[i];
     let j = i - 1;
@@ -366,7 +397,11 @@ function quickSortOOP(entities: GameEntity[], left: number, right: number) {
   quickSortOOP(entities, pivotIdx + 1, right);
 }
 
-function partitionOOP(entities: GameEntity[], left: number, right: number): number {
+function partitionOOP(
+  entities: GameEntity[],
+  left: number,
+  right: number,
+): number {
   const mid = (left + right) >> 1;
   const tempMid = entities[mid];
   entities[mid] = entities[right];
@@ -388,14 +423,24 @@ function partitionOOP(entities: GameEntity[], left: number, right: number): numb
   return i + 1;
 }
 
-function mergeSortOOP(entities: GameEntity[], temp: GameEntity[], left: number, right: number) {
+function mergeSortOOP(
+  entities: GameEntity[],
+  temp: GameEntity[],
+  left: number,
+  right: number,
+) {
   for (let i = 0; i < entities.length; i++) {
     temp[i] = entities[i];
   }
   mergeSortOOPRec(temp, entities, left, right);
 }
 
-function mergeSortOOPRec(src: GameEntity[], dst: GameEntity[], left: number, right: number) {
+function mergeSortOOPRec(
+  src: GameEntity[],
+  dst: GameEntity[],
+  left: number,
+  right: number,
+) {
   if (right - left < 12) {
     insertionSortRangeOOP(dst, left, right);
     for (let m = left; m <= right; m++) {
@@ -406,7 +451,7 @@ function mergeSortOOPRec(src: GameEntity[], dst: GameEntity[], left: number, rig
   const mid = (left + right) >> 1;
   mergeSortOOPRec(dst, src, left, mid);
   mergeSortOOPRec(dst, src, mid + 1, right);
-  
+
   let i = left;
   let j = mid + 1;
   let k = left;
@@ -426,4 +471,3 @@ function mergeSortOOPRec(src: GameEntity[], dst: GameEntity[], left: number, rig
     dst[k++] = src[j++];
   }
 }
-

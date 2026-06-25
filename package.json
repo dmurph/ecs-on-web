@@ -8,10 +8,13 @@
     "dev": "npm run asbuild && vite",
     "build": "npm run asbuild && tsc && vite build",
     "preview": "vite preview",
-    "benchmark": "npm run asbuild && npx tsx scripts/run_benchmarks.ts"
+    "benchmark": "npm run asbuild && npx tsx scripts/run_benchmarks.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
     "assemblyscript": "^0.28.18",
+    "prettier": "^3.0.0",
     "typescript": "~6.0.2",
     "vite": "^8.0.12"
   },

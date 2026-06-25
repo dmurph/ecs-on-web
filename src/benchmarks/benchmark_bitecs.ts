@@ -3,7 +3,6 @@ import { SeededPRNG } from '../prng';
 import { ENTITY_COLORS, ENTITY_MAX_SPEED } from '../config';
 import type { Simulator, EntityState, RenderEntity } from '../simulator';
 
-
 export interface BitecsStore {
   world: any;
   entities: number[];
@@ -25,7 +24,7 @@ export function updateMovement(
   canvasHeight: number,
   speedMultiplier: number,
   behavior: string,
-  prng: SeededPRNG
+  prng: SeededPRNG,
 ) {
   const { world, PositionX, PositionYwh, Physics } = store;
   if (behavior === 'wander') {
@@ -76,20 +75,25 @@ export function updateMovement(
   }
 }
 
-export function createBitecsData(world: any, numEntities: number, canvasWidth: number, canvasHeight: number): BitecsStore {
+export function createBitecsData(
+  world: any,
+  numEntities: number,
+  canvasWidth: number,
+  canvasHeight: number,
+): BitecsStore {
   const PositionX = { value: new Float64Array(numEntities) };
   const PositionYwh = {
     y: new Float64Array(numEntities),
     w: new Float64Array(numEntities),
-    h: new Float64Array(numEntities)
+    h: new Float64Array(numEntities),
   };
   const Physics = {
     vx: new Float64Array(numEntities),
     vy: new Float64Array(numEntities),
-    angle: new Float64Array(numEntities)
+    angle: new Float64Array(numEntities),
   };
   const Style = {
-    colorId: new Uint8Array(numEntities)
+    colorId: new Uint8Array(numEntities),
   };
 
   const entities: number[] = [];
@@ -126,7 +130,7 @@ export function runBroadphase(
   entities: Int32Array,
   outPairs: Int32Array,
   sortType: 'insertion' | 'quick' | 'merge' | 'native' = 'insertion',
-  tempEntities?: Int32Array
+  tempEntities?: Int32Array,
 ): number {
   let pairCount = 0;
   const len = entities.length;
@@ -182,7 +186,7 @@ export function resolveCollisions(
   store: BitecsStore,
   pairs: Int32Array,
   pairCount: number,
-  isColliding?: Uint8Array
+  isColliding?: Uint8Array,
 ): number {
   let collisionCount = 0;
   const { PositionX, PositionYwh, Physics } = store;
@@ -221,7 +225,7 @@ export function resolveCollisions(
       const rvx = Physics.vx[idB] - Physics.vx[idA];
       const rvy = Physics.vy[idB] - Physics.vy[idA];
       const velAlongNormal = rvx * nx + rvy * ny;
- 
+
       if (velAlongNormal < 0) {
         const impulse = -(2 * velAlongNormal) / (1 / massA + 1 / massB);
         Physics.vx[idA] -= (impulse / massA) * nx;
@@ -229,12 +233,16 @@ export function resolveCollisions(
         Physics.vx[idB] += (impulse / massB) * nx;
         Physics.vy[idB] += (impulse / massB) * ny;
 
-        const speedA = Math.sqrt(Physics.vx[idA] * Physics.vx[idA] + Physics.vy[idA] * Physics.vy[idA]);
+        const speedA = Math.sqrt(
+          Physics.vx[idA] * Physics.vx[idA] + Physics.vy[idA] * Physics.vy[idA],
+        );
         if (speedA > ENTITY_MAX_SPEED) {
           Physics.vx[idA] = (Physics.vx[idA] / speedA) * ENTITY_MAX_SPEED;
           Physics.vy[idA] = (Physics.vy[idA] / speedA) * ENTITY_MAX_SPEED;
         }
-        const speedB = Math.sqrt(Physics.vx[idB] * Physics.vx[idB] + Physics.vy[idB] * Physics.vy[idB]);
+        const speedB = Math.sqrt(
+          Physics.vx[idB] * Physics.vx[idB] + Physics.vy[idB] * Physics.vy[idB],
+        );
         if (speedB > ENTITY_MAX_SPEED) {
           Physics.vx[idB] = (Physics.vx[idB] / speedB) * ENTITY_MAX_SPEED;
           Physics.vy[idB] = (Physics.vy[idB] / speedB) * ENTITY_MAX_SPEED;
@@ -248,14 +256,13 @@ export function resolveCollisions(
   return collisionCount;
 }
 
-
 /**
  * Simulator representing a highly optimized third-party ECS framework (bitECS).
- * 
+ *
  * Data Layout: Struct of Arrays (SoA).
  * Component arrays are allocated globally in flat TypedArrays by bitECS.
  * Entities are represented as integer IDs (indices) which map directly to component arrays.
- * 
+ *
  * Algorithm: Sweep-and-Prune (S&P) using 1D Insertion Sort of integer entity array,
  * querying coordinates directly via component typed arrays.
  */
@@ -271,7 +278,7 @@ export class BitECSSimulator implements Simulator {
   private renderEntities: RenderEntity[] = [];
 
   constructor(
-    sortType: 'insertion' | 'quick' | 'merge' | 'native' = 'insertion'
+    sortType: 'insertion' | 'quick' | 'merge' | 'native' = 'insertion',
   ) {
     this.sortType = sortType;
   }
@@ -281,7 +288,7 @@ export class BitECSSimulator implements Simulator {
     this.store = createBitecsData(world, numEntities, width, height);
     this.sortedEntities = new Int32Array(this.store.entities);
     this.tempEntities = new Int32Array(numEntities);
-    
+
     this.pairsBuffer = new Int32Array(this.maxCollisions * 2);
     this.renderEntities = new Array(numEntities);
     for (let i = 0; i < numEntities; i++) {
@@ -289,17 +296,40 @@ export class BitECSSimulator implements Simulator {
     }
   }
 
-  update(width: number, height: number, speedMultiplier: number, behavior: string, prng: SeededPRNG): { time: number, collisionCount: number } {
+  update(
+    width: number,
+    height: number,
+    speedMultiplier: number,
+    behavior: string,
+    prng: SeededPRNG,
+  ): { time: number; collisionCount: number } {
     const start = performance.now();
     let collisionCount = 0;
     if (this.store) {
       // Step 1: Update movements
-      updateMovement(this.store, width, height, speedMultiplier, behavior, prng);
+      updateMovement(
+        this.store,
+        width,
+        height,
+        speedMultiplier,
+        behavior,
+        prng,
+      );
       // Step 2: Broadphase
-      const pairsCount = runBroadphase(this.store, this.sortedEntities, this.pairsBuffer, this.sortType, this.tempEntities);
-      
+      const pairsCount = runBroadphase(
+        this.store,
+        this.sortedEntities,
+        this.pairsBuffer,
+        this.sortType,
+        this.tempEntities,
+      );
+
       // Step 3: Narrowphase
-      collisionCount = resolveCollisions(this.store, this.pairsBuffer, pairsCount);
+      collisionCount = resolveCollisions(
+        this.store,
+        this.pairsBuffer,
+        pairsCount,
+      );
     }
     const end = performance.now();
     const time = end - start;
@@ -324,8 +354,12 @@ export class BitECSSimulator implements Simulator {
     return this.renderEntities;
   }
 
-  getTimes() { return this.times; }
-  clearTimes() { this.times = []; }
+  getTimes() {
+    return this.times;
+  }
+  clearTimes() {
+    this.times = [];
+  }
 
   getPositions(): EntityState[] {
     if (!this.store) return [];
@@ -342,7 +376,7 @@ export class BitECSSimulator implements Simulator {
         vx: Physics.vx[eid],
         vy: Physics.vy[eid],
         angle: Physics.angle[eid],
-        color: ENTITY_COLORS[Style.colorId[eid]]
+        color: ENTITY_COLORS[Style.colorId[eid]],
       };
     }
     return result;
@@ -370,11 +404,16 @@ export class BitECSSimulator implements Simulator {
 export {
   updateMovement as updateBitecsMovement,
   runBroadphase as runBitecsBroadphase,
-  resolveCollisions as resolveBitecsPhysics
+  resolveCollisions as resolveBitecsPhysics,
 };
 
 // Helper: Insertion sort over a range for subarrays
-function insertionSortRangeBitecs(entities: Int32Array, posX: Float64Array, left: number, right: number) {
+function insertionSortRangeBitecs(
+  entities: Int32Array,
+  posX: Float64Array,
+  left: number,
+  right: number,
+) {
   for (let i = left + 1; i <= right; i++) {
     const currIdx = entities[i];
     const currX = posX[currIdx];
@@ -391,7 +430,12 @@ export function insertionSortBitecs(entities: Int32Array, posX: Float64Array) {
   insertionSortRangeBitecs(entities, posX, 0, entities.length - 1);
 }
 
-export function quickSortBitecs(entities: Int32Array, posX: Float64Array, left: number, right: number) {
+export function quickSortBitecs(
+  entities: Int32Array,
+  posX: Float64Array,
+  left: number,
+  right: number,
+) {
   if (right - left < 12) {
     insertionSortRangeBitecs(entities, posX, left, right);
     return;
@@ -401,7 +445,12 @@ export function quickSortBitecs(entities: Int32Array, posX: Float64Array, left: 
   quickSortBitecs(entities, posX, pivotIdx + 1, right);
 }
 
-function partitionBitecs(entities: Int32Array, posX: Float64Array, left: number, right: number): number {
+function partitionBitecs(
+  entities: Int32Array,
+  posX: Float64Array,
+  left: number,
+  right: number,
+): number {
   const mid = (left + right) >> 1;
   const tempMid = entities[mid];
   entities[mid] = entities[right];
@@ -423,12 +472,24 @@ function partitionBitecs(entities: Int32Array, posX: Float64Array, left: number,
   return i + 1;
 }
 
-export function mergeSortBitecs(entities: Int32Array, posX: Float64Array, temp: Int32Array, left: number, right: number) {
+export function mergeSortBitecs(
+  entities: Int32Array,
+  posX: Float64Array,
+  temp: Int32Array,
+  left: number,
+  right: number,
+) {
   temp.set(entities);
   mergeSortBitecsRec(temp, entities, posX, left, right);
 }
 
-function mergeSortBitecsRec(src: Int32Array, dst: Int32Array, posX: Float64Array, left: number, right: number) {
+function mergeSortBitecsRec(
+  src: Int32Array,
+  dst: Int32Array,
+  posX: Float64Array,
+  left: number,
+  right: number,
+) {
   if (right - left < 12) {
     insertionSortRangeBitecs(dst, posX, left, right);
     for (let m = left; m <= right; m++) {
@@ -439,7 +500,7 @@ function mergeSortBitecsRec(src: Int32Array, dst: Int32Array, posX: Float64Array
   const mid = (left + right) >> 1;
   mergeSortBitecsRec(dst, src, posX, left, mid);
   mergeSortBitecsRec(dst, src, posX, mid + 1, right);
-  
+
   let i = left;
   let j = mid + 1;
   let k = left;
@@ -459,4 +520,3 @@ function mergeSortBitecsRec(src: Int32Array, dst: Int32Array, posX: Float64Array
     dst[k++] = src[j++];
   }
 }
-
