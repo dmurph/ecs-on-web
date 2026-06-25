@@ -155,8 +155,9 @@ function generateMetricCards(activeSimulatorIds?: string[]) {
       card.classList.add('hidden');
     }
 
-    const header = document.createElement('div');
+    const header = document.createElement('label');
     header.className = 'card-header-simple';
+    header.htmlFor = `toggle-${sim.id}`;
 
     const leftGroup = document.createElement('div');
     leftGroup.style.display = 'flex';
