@@ -29,6 +29,11 @@ export class GameEntity {
     const colorIndex = Math.floor(Math.random() * ENTITY_COLORS.length);
     this.color = ENTITY_COLORS[colorIndex];
 
+    // Deliberate "Bloat" Fields:
+    // In a real game, an entity has inventory, names, AI state, etc.
+    // We include these here to simulate a real-world object's memory footprint.
+    // This demonstrates how "cold" data (data not needed for physics) pollutes
+    // the CPU cache during the physics update phase.
     this.name = `Entity_${id}_${Math.random()}`;
     this.inventory = new Array(Math.floor(Math.random() * 10)).fill(0);
 

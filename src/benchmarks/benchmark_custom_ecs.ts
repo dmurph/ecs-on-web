@@ -22,8 +22,12 @@ export function createECSData(
   // posX is isolated to optimize cache line utilization during Sweep-and-Prune
   // sorting
   const posX = new Float64Array(numEntities);
-  // posYwh is packed [y, w, h] to load components together during Y-overlap
-  // checks
+  // posYwh is packed as [y, w, h] for each entity.
+  // Why pack them? A CPU cache line is typically 64 bytes.
+  // By packing y, w, and h contiguously in memory, a single cache line fetch
+  // loads all three values for multiple entities. When the broadphase checks
+  // Y-overlaps, it gets 100% L1/L2 cache hits instead of fetching from
+  // three separate memory locations.
   const posYwh = new Float64Array(numEntities * 3);
   const colorId = new Uint8Array(numEntities);
   const angle = new Float64Array(numEntities);
@@ -136,6 +140,13 @@ export function runBroadphase(
   let pairCount = 0;
   const len = indices.length;
   const maxPairs = outPairs.length / 2;
+
+  // Why sort an 'indices' array instead of sorting the components directly?
+  // Sorting the component arrays (posX, posYwh, vx, vy, etc.) directly would
+  // require copying/permuting all of them every frame (a costly O(N) operation).
+  // By sorting a lightweight 'indices' array, we avoid this copying cost,
+  // but we pay a small "index indirection" penalty (posX[indices[i]]) during the sweep.
+  // (See the blog post's "Potential Improvements" section on how to eliminate this).
 
   // 1. Sort indices based on chosen algorithm
   if (sortMethod === SortMethod.Insertion) {

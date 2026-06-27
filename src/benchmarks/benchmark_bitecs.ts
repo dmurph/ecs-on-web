@@ -83,6 +83,11 @@ export function createBitecsData(
   canvasWidth: number,
   canvasHeight: number,
 ): BitecsStore {
+  // bitECS Component Layout:
+  // By default, bitECS allocates a separate TypedArray for every property in a component
+  // (PositionYwh.y, PositionYwh.w, and PositionYwh.h are three isolated arrays).
+  // This provides a clean, extendable API, but unlike our custom packed posYwh array,
+  // it means the CPU must fetch from three separate memory streams during the sweep phase.
   const PositionX = { value: new Float64Array(numEntities) };
   const PositionYwh = {
     y: new Float64Array(numEntities),

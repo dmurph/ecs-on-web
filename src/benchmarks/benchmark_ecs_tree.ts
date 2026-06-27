@@ -1,3 +1,15 @@
+/**
+ * Why compare Sweep & Prune to a Dynamic AABB Tree?
+ * 
+ * An AABB Tree is a hierarchical spatial partition (bounding volume hierarchy).
+ * Algorithmically, it is O(N log N) for queries, which is theoretically superior 
+ * to a naive Sweep & Prune.
+ * 
+ * However, trees require traversing parent-child links. 
+ * In OOP, this is physical pointer chasing. In ECS, this is logical index indirection.
+ * This benchmark demonstrates how the O(N) sequential memory access of Sweep & Prune
+ * beats the O(N log N) tree due to CPU cache line prefetching and branch prediction.
+ */
 import {
   ENTITY_COLORS,
   ENTITY_MAX_SPEED,
