@@ -745,6 +745,7 @@ canvas {
 .toggle-shortcuts {
   display: flex;
   gap: 8px;
+  margin-left: auto;
 }
 
 .shortcut-link {
@@ -922,7 +923,7 @@ body.is-embedded {
 .preset-header-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   flex-wrap: wrap;
   gap: 15px;
   margin-bottom: 8px;
@@ -936,9 +937,9 @@ body.is-embedded {
 
 .preset-buttons {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  flex: 1;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  overflow: hidden;
 }
 
 .preset-btn {
@@ -947,9 +948,14 @@ body.is-embedded {
   font-weight: 600;
   background-color: var(--bg-input);
   color: var(--color-text-secondary);
-  border: 1px solid var(--border-color);
+  border: none;
+  border-right: 1px solid var(--border-color);
   cursor: pointer;
   transition: all 0.15s ease;
+}
+
+.preset-btn:last-child {
+  border-right: none;
 }
 
 .preset-btn:hover {
@@ -960,7 +966,6 @@ body.is-embedded {
 .preset-btn.active {
   background-color: var(--color-accent);
   color: #ffffff;
-  border-color: var(--color-accent);
 }
 
 .preset-description {
