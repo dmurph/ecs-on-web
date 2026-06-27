@@ -997,3 +997,60 @@ body.is-embedded {
 .hidden {
   display: none !important;
 }
+
+/* Radio-style visualization selector */
+.vis-selector-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.vis-selector-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.vis-selector-buttons {
+  display: flex;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.vis-btn {
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background-color: var(--bg-input);
+  color: var(--color-text-secondary);
+  border: none;
+  border-right: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.vis-btn:last-child {
+  border-right: none;
+}
+
+.vis-btn:hover {
+  background-color: var(--border-color);
+  color: var(--color-text-primary);
+}
+
+.vis-btn.active {
+  background-color: var(--color-accent);
+  color: #ffffff;
+}
+
+/* Three-state visualization mode layout */
+.visualizer-grid.vis-mode-one .canvas-card:not(.hidden) {
+  display: block;
+}
+
+.visualizer-grid.vis-mode-one
+  .canvas-card:not(.hidden)
+  ~ .canvas-card:not(.hidden) {
+  display: none;
+}

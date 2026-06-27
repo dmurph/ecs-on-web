@@ -100,7 +100,8 @@ let speedupValuesContainer: HTMLElement;
 
 let chartFrameIndexEl: HTMLElement;
 let chartFrameTotalEl: HTMLElement;
-let btnToggleVisualizer: HTMLButtonElement;
+let visSelectorContainer: HTMLElement;
+let visButtons: HTMLButtonElement[] = [];
 
 // Maps for simulator-specific elements
 const currentTimeEls: Record<string, HTMLElement> = {};
@@ -368,9 +369,10 @@ export function initUI(activeSimulatorIds?: string[]) {
 
   chartFrameIndexEl = document.getElementById('chart-frame-index')!;
   chartFrameTotalEl = document.getElementById('chart-frame-total')!;
-  btnToggleVisualizer = document.getElementById(
-    'btn-toggle-visualizer',
-  ) as HTMLButtonElement;
+  visSelectorContainer = document.getElementById('vis-selector-container')!;
+  if (visSelectorContainer) {
+    visButtons = Array.from(visSelectorContainer.querySelectorAll('.vis-btn'));
+  }
 
   SIMULATOR_REGISTRY.forEach((sim) => {
     toggles[sim.id] = document.getElementById(
@@ -419,42 +421,66 @@ export function setupUIListeners(callbacks: UICallbacks) {
   btnReset.addEventListener('click', callbacks.onReset);
   btnCopyResults.addEventListener('click', callbacks.onCopy);
 
-  if (btnToggleVisualizer) {
-    let isVisualizerVisible = false; // Default to not showing
+  if (visSelectorContainer && visButtons.length > 0) {
+    let visMode: 'one' | 'all' | 'none' = 'one';
     try {
       const hash = window.location.hash;
       const query = window.location.search;
-      isVisualizerVisible =
+      if (
         hash.includes('vis=expanded') ||
+        hash.includes('vis=all') ||
         hash.includes('vis=true') ||
-        query.includes('vis=true');
+        query.includes('vis=true')
+      ) {
+        visMode = 'all';
+      } else if (
+        hash.includes('vis=none') ||
+        hash.includes('vis=false') ||
+        query.includes('vis=false')
+      ) {
+        visMode = 'none';
+      }
     } catch (e) {}
 
     const grid = document.querySelector('.visualizer-grid');
-    btnToggleVisualizer.textContent = isVisualizerVisible
-      ? 'Hide Visualizations'
-      : 'Show Bouncing Balls!';
-    if (grid) grid.classList.toggle('hidden', !isVisualizerVisible);
 
-    btnToggleVisualizer.addEventListener('click', () => {
-      isVisualizerVisible = !isVisualizerVisible;
-      try {
-        const hashStr = isVisualizerVisible ? '#vis=expanded' : '';
-        history.replaceState(
-          null,
-          '',
-          window.location.pathname + window.location.search + hashStr,
-        );
-      } catch (e) {}
-      btnToggleVisualizer.textContent = isVisualizerVisible
-        ? 'Hide Visualizations'
-        : 'Show Bouncing Balls!';
+    const updateVisModeUI = (mode: 'one' | 'all' | 'none') => {
+      visButtons.forEach((btn) => {
+        const val = btn.getAttribute('data-value');
+        btn.classList.toggle('active', val === mode);
+      });
+
       if (grid) {
-        grid.classList.toggle('hidden', !isVisualizerVisible);
-        if (isVisualizerVisible) {
-          resizeCanvases();
-        }
+        grid.classList.toggle('hidden', mode === 'none');
+        grid.classList.toggle('vis-mode-one', mode === 'one');
       }
+
+      if (mode !== 'none') {
+        resizeCanvases();
+      }
+    };
+
+    updateVisModeUI(visMode);
+
+    visButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const mode = btn.getAttribute('data-value') as 'one' | 'all' | 'none';
+        visMode = mode;
+
+        try {
+          let hashStr = '';
+          if (mode === 'all') hashStr = '#vis=all';
+          else if (mode === 'none') hashStr = '#vis=none';
+
+          history.replaceState(
+            null,
+            '',
+            window.location.pathname + window.location.search + hashStr,
+          );
+        } catch (e) {}
+
+        updateVisModeUI(visMode);
+      });
     });
   }
 

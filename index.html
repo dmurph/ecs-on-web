@@ -215,28 +215,18 @@
       <!-- 4. Output (Visualizer) Section -->
       <section class="section-output">
         <div class="output-header">
-          <h2>Live Visualizer Output</h2>
-          <button id="btn-toggle-visualizer" class="btn btn-highlight btn-sm">
-            Show Visualizations!
-          </button>
+          <h2>The Simulation!</h2>
+          <div class="vis-selector-container">
+            <div class="vis-selector-buttons" id="vis-selector-container">
+              <button class="vis-btn active" data-value="one">One</button>
+              <button class="vis-btn" data-value="all">All</button>
+              <button class="vis-btn" data-value="none">None</button>
+            </div>
+          </div>
         </div>
-        <div class="visualizer-grid hidden" id="visualizer-grid">
+        <div class="visualizer-grid vis-mode-one" id="visualizer-grid">
           <!-- Dynamic visualizer canvases will be injected here -->
         </div>
-        <script>
-          if (
-            window.location.hash.includes('vis=expanded') ||
-            window.location.search.includes('vis=true')
-          ) {
-            var g = document.getElementById('visualizer-grid');
-            var b = document.getElementById('btn-toggle-visualizer');
-            if (g) {
-              g.classList.remove('hidden');
-              g.style.minHeight = '2750px';
-            }
-            if (b) b.textContent = 'Hide Visualizations';
-          }
-        </script>
       </section>
     </div>
     <script type="module" src="/src/main.ts"></script>
