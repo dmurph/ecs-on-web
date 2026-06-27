@@ -3,8 +3,8 @@ import { OOPSimulator } from './benchmarks/benchmark_oop';
 import { OOPTreeSimulator } from './benchmarks/benchmark_oop_tree';
 import { CustomECSSimulator } from './benchmarks/benchmark_custom_ecs';
 import { ECSTreeSimulator } from './benchmarks/benchmark_ecs_tree';
-import { WasmECSSimulator } from './benchmarks/benchmark_wasm_ecs';
-import { WasmTreeSimulator } from './benchmarks/benchmark_wasm_tree';
+import { WasmECSSimulator } from './benchmarks/benchmark_wasm_ecs_wrapper';
+import { WasmTreeSimulator } from './benchmarks/benchmark_wasm_tree_wrapper';
 import { BitECSSimulator } from './benchmarks/benchmark_bitecs';
 import { SortMethod } from './config';
 
@@ -135,7 +135,7 @@ export const SIMULATOR_REGISTRY: SimulatorConfig[] = [
     name: 'WASM ECS S&P (Insertion)',
     color: '#be185d',
     activeByDefault: true,
-    sourceFile: 'benchmark_wasm_ecs.ts',
+    sourceFile: 'assembly/benchmark_wasm_ecs.ts',
     createInstance: () => new WasmECSSimulator(SortMethod.Insertion),
   },
   {
@@ -143,7 +143,7 @@ export const SIMULATOR_REGISTRY: SimulatorConfig[] = [
     name: 'WASM ECS S&P (Quick)',
     color: '#e11d48',
     activeByDefault: false,
-    sourceFile: 'benchmark_wasm_ecs.ts',
+    sourceFile: 'assembly/benchmark_wasm_ecs.ts',
     createInstance: () => new WasmECSSimulator(SortMethod.Quick),
   },
   {
@@ -151,7 +151,7 @@ export const SIMULATOR_REGISTRY: SimulatorConfig[] = [
     name: 'WASM ECS S&P (Merge)',
     color: '#9d174d',
     activeByDefault: false,
-    sourceFile: 'benchmark_wasm_ecs.ts',
+    sourceFile: 'assembly/benchmark_wasm_ecs.ts',
     createInstance: () => new WasmECSSimulator(SortMethod.Merge),
   },
   {
@@ -159,7 +159,7 @@ export const SIMULATOR_REGISTRY: SimulatorConfig[] = [
     name: 'WASM Tree',
     color: '#a21caf',
     activeByDefault: true,
-    sourceFile: 'benchmark_wasm_tree.ts',
+    sourceFile: 'assembly/benchmark_wasm_tree.ts',
     createInstance: () => new WasmTreeSimulator(),
   },
 ];

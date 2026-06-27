@@ -31,7 +31,14 @@ export const PRESETS: PresetConfig[] = [
     name: 'H1: Tree vs S&P',
     description:
       'Hypothesis 1: Is an O(N log N) spatial tree always faster than O(N²) Sweep & Prune?',
-    simulatorIds: ['oop', 'ecs', 'oop-tree', 'ecs-tree', 'wasm-tree'],
+    simulatorIds: [
+      'oop',
+      'ecs',
+      'ecs-quick',
+      'oop-tree',
+      'ecs-tree',
+      'wasm-tree',
+    ],
   },
   {
     id: 'h2',
@@ -111,6 +118,11 @@ function generatePresets(onSelectPreset: (preset: PresetConfig) => void) {
   const descEl = document.getElementById('preset-desc-text');
   if (!container || !descEl) return;
   container.replaceChildren();
+
+  const currentPreset = PRESETS.find((p) => p.id === currentPresetId);
+  if (currentPreset) {
+    descEl.textContent = currentPreset.description;
+  }
 
   PRESETS.forEach((preset) => {
     const btn = document.createElement('button');
@@ -305,13 +317,14 @@ function generateCanvases(activeSimulatorIds?: string[]) {
 export function initUI(activeSimulatorIds?: string[]) {
   const activeIds =
     activeSimulatorIds ??
+    PRESETS.find((p) => p.id === 'h1')?.simulatorIds ??
     SIMULATOR_REGISTRY.filter((s) => s.activeByDefault).map((s) => s.id);
   const match = PRESETS.find(
     (p) =>
       p.simulatorIds.length === activeIds.length &&
       p.simulatorIds.every((id) => activeIds.includes(id)),
   );
-  currentPresetId = match ? match.id : 'all';
+  currentPresetId = match ? match.id : '';
 
   generateMetricCards(activeIds);
   generateLegend(activeIds);
@@ -493,7 +506,8 @@ export function setupUIListeners(callbacks: UICallbacks) {
     btnSelectAll.addEventListener('click', () => {
       currentPresetId = 'all';
       const descEl = document.getElementById('preset-desc-text');
-      if (descEl) descEl.textContent = PRESETS[0].description;
+      const allPreset = PRESETS.find((p) => p.id === 'all');
+      if (descEl && allPreset) descEl.textContent = allPreset.description;
       document.querySelectorAll('.preset-btn').forEach((b) => {
         b.classList.toggle('active', b.id === 'btn-preset-all');
         b.setAttribute(

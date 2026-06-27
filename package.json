@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "asbuild": "asc src/benchmarks/assembly/index.ts -o public/benchmark_wasm_ecs.wasm -O --noAssert && asc src/benchmarks/assembly/tree.ts -o public/benchmark_wasm_tree.wasm -O --noAssert",
+    "asbuild": "asc src/benchmarks/assembly/benchmark_wasm_ecs.ts -o public/benchmark_wasm_ecs.wasm -O --noAssert && asc src/benchmarks/assembly/benchmark_wasm_tree.ts -o public/benchmark_wasm_tree.wasm -O --noAssert",
     "dev": "npm run asbuild && vite",
     "build": "npm run asbuild && tsc && vite build",
     "preview": "vite preview",

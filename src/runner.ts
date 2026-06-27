@@ -10,6 +10,7 @@ import {
   setButtonDisabledStates,
   resetUIElements,
   updateMetricsDisplay,
+  PRESETS,
 } from './ui';
 import { SeededPRNG } from './prng';
 
@@ -62,14 +63,15 @@ export class BenchmarkRunner {
     });
 
     const storedActiveIds = this.getStoredActiveSimulatorIds();
-    if (storedActiveIds && storedActiveIds.length > 0) {
+    if (storedActiveIds !== null) {
       this.activeSimulators = this.simulators.filter((s) =>
         storedActiveIds.includes(s.id),
       );
-    }
-    if (this.activeSimulators.length === 0) {
-      this.activeSimulators = this.simulators.filter(
-        (_, idx) => SIMULATOR_REGISTRY[idx].activeByDefault,
+    } else {
+      const h1Preset = PRESETS.find((p) => p.id === 'h1');
+      const defaultIds = h1Preset ? h1Preset.simulatorIds : [];
+      this.activeSimulators = this.simulators.filter((s) =>
+        defaultIds.includes(s.id),
       );
     }
   }

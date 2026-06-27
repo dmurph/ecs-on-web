@@ -192,10 +192,12 @@ async function start() {
   const bitecsModule = await import('../src/benchmarks/benchmark_bitecs');
   BitECSSimulator = bitecsModule.BitECSSimulator;
 
-  const wasmEcsModule = await import('../src/benchmarks/benchmark_wasm_ecs');
+  const wasmEcsModule =
+    await import('../src/benchmarks/benchmark_wasm_ecs_wrapper');
   WasmECSSimulator = wasmEcsModule.WasmECSSimulator;
 
-  const wasmTreeModule = await import('../src/benchmarks/benchmark_wasm_tree');
+  const wasmTreeModule =
+    await import('../src/benchmarks/benchmark_wasm_tree_wrapper');
   WasmTreeSimulator = wasmTreeModule.WasmTreeSimulator;
 
   const prngModule = await import('../src/prng');
