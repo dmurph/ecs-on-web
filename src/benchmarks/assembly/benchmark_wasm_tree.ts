@@ -39,7 +39,13 @@ let pairsBuffer!: StaticArray<i32>;
 let entityLeaf!: StaticArray<i32>;
 let moveBuffer!: StaticArray<i32>;
 
-// Tree structure arrays
+// Parallel Array Tree Layout:
+// In WASM, creating dynamic node objects (new Node()) causes heap allocations and garbage
+// collection pauses. Instead, we represent our hierarchical AABB tree using parallel arrays.
+// A node at index `i` has its properties split across these arrays:
+// - Bounding box: treeMinX[i], treeMinY[i], treeMaxX[i], treeMaxY[i]
+// - Tree links: treeParent[i], treeLeft[i], treeRight[i]
+// This keeps all node metadata contiguously allocated in linear memory.
 let treeMinX!: StaticArray<f64>;
 let treeMinY!: StaticArray<f64>;
 let treeMaxX!: StaticArray<f64>;
@@ -50,6 +56,9 @@ let treeRight!: StaticArray<i32>;
 let treeHeight!: StaticArray<i32>;
 let treeEntity!: StaticArray<i32>;
 
+// Pre-allocated Traversal Stacks:
+// To query and traverse the tree without allocating memory at runtime,
+// we pre-allocate fixed-size stacks. This ensures that tree traversal is 100% GC-free.
 let stackA!: StaticArray<i32>;
 let stackB!: StaticArray<i32>;
 let mainStack!: StaticArray<i32>;

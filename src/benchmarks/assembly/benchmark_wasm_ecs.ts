@@ -17,6 +17,11 @@ class LCG {
   }
 }
 
+// Memory Layout:
+// We use StaticArray<T> instead of standard Array<T> in AssemblyScript.
+// StaticArray is allocated as a single, fixed-size contiguous block in WASM linear memory,
+// avoiding the dynamic resizing and array-header overhead of standard arrays.
+// This is the bare-metal foundation of Data-Oriented Design in WebAssembly.
 let posX!: StaticArray<f64>;
 let posYwh!: StaticArray<f64>; // Packed [posY, w, h] for each entity
 let colorId!: StaticArray<u8>;
@@ -29,6 +34,9 @@ let colliding!: StaticArray<u8>;
 let pairsBuffer!: StaticArray<i32>;
 let tempIndices!: StaticArray<i32>;
 
+// LCG (Linear Congruential Generator):
+// We implement a custom fast, deterministic PRNG inside the WASM module.
+// This avoids the overhead of calling out to the JavaScript host's Math.random().
 let prng: LCG = new LCG(1);
 
 export function init(numEntities: i32, maxCollisions: i32): void {
@@ -87,6 +95,11 @@ export function updateMovement(
 
   if (behavior == 1) { // wander
     for (let i = 0; i < len; i++) {
+      // The unchecked() operator:
+      // By default, AssemblyScript emits array bounds-checking instructions for every access.
+      // Wrapping lookups in unchecked() tells the compiler to skip these checks.
+      // Under hot loops, this is a massive win because it allows the compiler to generate 
+      // vector (SIMD) instructions and maximize instruction pipeline throughput.
       let currentAngle = unchecked(localAngle[i]);
       currentAngle += (prng.next() - 0.5) * 0.4;
       unchecked(localAngle[i] = currentAngle);

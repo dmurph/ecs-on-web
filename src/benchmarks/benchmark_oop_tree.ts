@@ -505,6 +505,11 @@ const stackA = new Array<TreeNode | null>(1024).fill(null);
 const stackB = new Array<TreeNode | null>(1024).fill(null);
 const mainStack = new Array<TreeNode | null>(1024).fill(null);
 
+// Iterative (Stack-Based) Tree Overlap Query:
+// We use a custom, pre-allocated stack (stackA, stackB) to traverse the tree.
+// Why? Recursive functions incur JS engine call stack overhead and allocate frame
+// contexts. An iterative loop with pre-allocated arrays is significantly faster
+// in hot game loops and guarantees zero GC activity.
 function queryOverlapIter(
   startNodeA: TreeNode,
   startNodeB: TreeNode,
@@ -549,6 +554,9 @@ function queryOverlapIter(
       if (stackPtr + 2 > stackA.length) {
         throw new Error('AABBTree: Stack overflow in queryOverlap');
       }
+      // Heuristic: Descend the taller subtree first.
+      // By splitting the node with the larger height, we prune the search space
+      // much faster, reducing the total number of overlap checks.
       if (nodeA.height > nodeB.height) {
         stackA[stackPtr] = nodeA.left!;
         stackB[stackPtr] = nodeB;

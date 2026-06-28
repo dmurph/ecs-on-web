@@ -421,6 +421,11 @@ const stackA = new Int32Array(1024);
 const stackB = new Int32Array(1024);
 const mainStack = new Int32Array(1024);
 
+// Iterative (Stack-Based) Tree Overlap Query:
+// We use a custom, pre-allocated stack (stackA, stackB) to traverse the tree.
+// Why? Recursive functions (which are common in tree traversal) incur JS engine call stack
+// overhead and allocate frame contexts under the hood. An iterative loop with pre-allocated
+// arrays is significantly faster in hot game loops and guarantees zero GC activity.
 function queryOverlapFlatIter(
   tree: FlatAABBTree,
   startNodeA: number,
@@ -479,6 +484,9 @@ function queryOverlapFlatIter(
       if (stackPtr + 2 > stackA.length) {
         throw new Error('FlatAABBTree: Stack overflow in queryOverlap');
       }
+      // Heuristic: Descend the taller subtree first.
+      // By splitting the node with the larger height, we prune the search space
+      // much faster, reducing the total number of overlap checks.
       if (height[nodeA] > height[nodeB]) {
         stackA[stackPtr] = left[nodeA];
         stackB[stackPtr] = nodeB;
